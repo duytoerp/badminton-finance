@@ -4,8 +4,10 @@ import { PageHeader } from '../components/layout/Shell';
 import DataTable, { Column } from '../components/common/DataTable';
 import ResponsiveSheet from '../components/common/ResponsiveSheet';
 import {
-  BookingRecurrenceType, Court, CourtBooking, CreateCourtBookingBody, PricingTemplate,
-  createCourtBooking, deleteCourtBooking, listCourtBookings, listCourts, listPricingTemplates, previewCourtBooking
+  BookingRecurrenceType, Court, CourtBooking, CourtBookingPreview, CreateCourtBookingBody,
+  ExpenseTemplate, PricingTemplate,
+  createCourtBooking, deleteCourtBooking, listCourtBookings, listCourts, listExpenseTemplates,
+  listPricingTemplates, previewCourtBooking
 } from '../api/endpoints';
 import { useIsDesktop } from '../hooks/useBreakpoint';
 
@@ -96,6 +98,7 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
   const [title, setTitle] = useState('Lịch đặt sân');
   const [courts, setCourts] = useState<Court[]>([]);
   const [templates, setTemplates] = useState<PricingTemplate[]>([]);
+  const [expenseTemplates, setExpenseTemplates] = useState<ExpenseTemplate[]>([]);
   const [courtId, setCourtId] = useState('');
   const [type, setType] = useState<BookingRecurrenceType>('SingleDates');
 
@@ -111,15 +114,17 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
   const [end, setEnd] = useState('21:00');
   const [courtCount, setCourtCount] = useState(1);
   const [templateId, setTemplateId] = useState('');
+  const [expenseTemplateId, setExpenseTemplateId] = useState('');
   const [note, setNote] = useState('');
 
-  const [preview, setPreview] = useState<{ count: number; dates: string[] } | null>(null);
+  const [preview, setPreview] = useState<CourtBookingPreview | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (courts.length === 0) listCourts().then(r => { setCourts(r.data); if (r.data[0] && !courtId) setCourtId(r.data[0].id); });
     if (templates.length === 0) listPricingTemplates().then(r => setTemplates(r.data));
+    if (expenseTemplates.length === 0) listExpenseTemplates().then(r => setExpenseTemplates(r.data));
   }, [open]); // eslint-disable-line
 
   const body: CreateCourtBookingBody | null = useMemo(() => {
@@ -132,6 +137,7 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
       endTime: end + ':00',
       courtCount,
       pricingTemplateId: templateId || undefined,
+      expenseTemplateId: expenseTemplateId || undefined,
       note: note || undefined
     };
     if (type === 'SingleDates') {
@@ -142,7 +148,7 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
       return { ...base, pattern: weekdays.join(','), fromDate, toDate } as CreateCourtBookingBody;
     }
     return { ...base, pattern: daysOfMonth, fromDate, toDate } as CreateCourtBookingBody;
-  }, [title, courtId, type, singleDates, weekdays, daysOfMonth, fromDate, toDate, start, end, courtCount, templateId, note]);
+  }, [title, courtId, type, singleDates, weekdays, daysOfMonth, fromDate, toDate, start, end, courtCount, templateId, expenseTemplateId, note]);
 
   // auto-preview when inputs change
   useEffect(() => {
@@ -256,6 +262,16 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
         </select>
       </div>
 
+      <div className="form-field"><label>Template chi phí</label>
+        <select value={expenseTemplateId} onChange={e => setExpenseTemplateId(e.target.value)}>
+          <option value="">— Mặc định ({expenseTemplates.find(t => t.isDefault)?.name || 'không có'}) —</option>
+          {expenseTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <div className="card-sub" style={{ fontSize: 12, marginTop: 4 }}>
+          Hệ thống tự tính tiền sân = số giờ × giá giờ của sân × số sân.
+        </div>
+      </div>
+
       <div className="form-field"><label>Ghi chú</label>
         <input value={note} onChange={e => setNote(e.target.value)} /></div>
 
@@ -269,6 +285,39 @@ function BookingSheet({ open, onClose, onDone }: { open: boolean; onClose: () =>
               {preview.dates.slice(0, 8).map(d => new Date(d).toLocaleDateString('vi-VN')).join(' · ')}
               {preview.dates.length > 8 ? ` … (+${preview.dates.length - 8})` : ''}
             </div>
+            {preview.estimatedExpense && preview.estimatedExpense.lines.length > 0 && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--c-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <b>Chi phí dự kiến mỗi buổi</b>
+                  <span style={{ color: 'var(--c-primary)' }}>
+                    {preview.estimatedExpense.expenseTemplateName || '— không có template'}
+                  </span>
+                </div>
+                <table style={{ width: '100%', fontSize: 13, marginTop: 6 }}>
+                  <tbody>
+                    {preview.estimatedExpense.lines.map((l, k) => (
+                      <tr key={k}>
+                        <td style={{ paddingRight: 8 }}>{l.name}</td>
+                        <td className="card-sub" style={{ fontSize: 12 }}>{l.formula}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{(l.amount || 0).toLocaleString('vi-VN')}đ</td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: '1px solid var(--c-border)' }}>
+                      <td colSpan={2} style={{ paddingTop: 4, fontWeight: 700 }}>Tổng mỗi buổi</td>
+                      <td style={{ paddingTop: 4, textAlign: 'right', fontWeight: 700, color: 'var(--c-danger)' }}>
+                        {preview.estimatedExpense.total.toLocaleString('vi-VN')}đ
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2} style={{ fontWeight: 700 }}>Tổng {preview.count} buổi</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--c-danger)' }}>
+                        {preview.estimatedTotalExpense.toLocaleString('vi-VN')}đ
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </>
         )}
       </div>

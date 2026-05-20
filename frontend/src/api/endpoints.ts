@@ -33,6 +33,8 @@ export interface PricingTemplate {
 
 export interface Court { id: string; name: string; address?: string; defaultHourlyRate: number; isActive: boolean; }
 
+export type PlayerGroupType = 'Fixed' | 'Casual' | 'Tournament' | 'Other';
+
 export interface Participant {
   id: string; sessionId: string; playerId: string;
   playerName: string; playerPhone?: string;
@@ -40,6 +42,9 @@ export interface Participant {
   slotCount: number; multiplier: number; fixedAmount: number;
   amountDue: number; amountPaid: number; debt: number;
   paymentStatus: PaymentStatus; isGuest: boolean;
+  joinedViaGroupId?: string;
+  joinedViaGroupName?: string;
+  joinedViaGroupType?: PlayerGroupType;
 }
 
 export interface Session {
@@ -93,6 +98,19 @@ export const createSession = (body: Partial<Session>) =>
   api.post<ApiResponse<Session>>('/sessions', body).then(r => r.data);
 export const addParticipant = (sessionId: string, playerId: string, slotCount = 1) =>
   api.post<ApiResponse<Participant>>('/sessions/participants', { sessionId, playerId, slotCount }).then(r => r.data);
+export interface AddParticipantsBulkResult {
+  added: number; skippedDuplicate: number; skippedInactive: number;
+  addedPlayerIds: string[]; participantCount: number; totalSlots: number;
+}
+export const addParticipantsBulk = (
+  sessionId: string, playerIds: string[],
+  opts: { slotCount?: number; includeInactive?: boolean } = {}
+) =>
+  api.post<ApiResponse<AddParticipantsBulkResult>>('/sessions/participants/bulk', {
+    sessionId, playerIds,
+    slotCount: opts.slotCount ?? 1,
+    includeInactive: opts.includeInactive ?? false
+  }).then(r => r.data);
 export const removeParticipant = (participantId: string) =>
   api.delete<ApiResponse<boolean>>(`/sessions/participants/${participantId}`).then(r => r.data);
 export const addExpense = (sessionId: string, amount: number, description: string) =>
@@ -147,6 +165,59 @@ export const updatePricingTemplate = (id: string, body: Omit<PricingTemplate, 'i
 export const deletePricingTemplate = (id: string) =>
   api.delete<ApiResponse<boolean>>(`/pricing-templates/${id}`).then(r => r.data);
 
+// Expense templates
+export type ExpenseCalcType = 'FixedAmount' | 'CourtHourlyRate' | 'PerHour' | 'PerCourt' | 'PerHourPerCourt';
+
+export interface ExpenseTemplateItem {
+  id?: string;
+  name: string;
+  calculationType: ExpenseCalcType;
+  amount: number;
+  sortOrder: number;
+}
+
+export interface ExpenseTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  items: ExpenseTemplateItem[];
+}
+
+export interface ResolvedExpenseLine {
+  name: string;
+  calculationType: ExpenseCalcType;
+  amount: number;
+  formula: string;
+}
+
+export interface ResolvedExpenses {
+  expenseTemplateId?: string;
+  expenseTemplateName?: string;
+  hours: number;
+  courtCount: number;
+  courtHourlyRate: number;
+  lines: ResolvedExpenseLine[];
+  total: number;
+}
+
+export const listExpenseTemplates = () =>
+  api.get<ApiResponse<ExpenseTemplate[]>>('/expense-templates').then(r => r.data);
+export const getDefaultExpenseTemplate = () =>
+  api.get<ApiResponse<ExpenseTemplate | null>>('/expense-templates/default').then(r => r.data);
+export const getExpenseTemplate = (id: string) =>
+  api.get<ApiResponse<ExpenseTemplate>>(`/expense-templates/${id}`).then(r => r.data);
+export const createExpenseTemplate = (body: Omit<ExpenseTemplate, 'id'>) =>
+  api.post<ApiResponse<ExpenseTemplate>>('/expense-templates', body).then(r => r.data);
+export const updateExpenseTemplate = (id: string, body: Omit<ExpenseTemplate, 'id'>) =>
+  api.put<ApiResponse<ExpenseTemplate>>(`/expense-templates/${id}`, body).then(r => r.data);
+export const deleteExpenseTemplate = (id: string) =>
+  api.delete<ApiResponse<boolean>>(`/expense-templates/${id}`).then(r => r.data);
+export const resolveExpenses = (params: {
+  templateId?: string; courtId: string; start: string; end: string; courtCount: number;
+}) => api.get<ApiResponse<ResolvedExpenses>>('/expense-templates/resolve', { params }).then(r => r.data);
+
 // Court bookings
 export type BookingRecurrenceType = 'SingleDates' | 'MonthlyByWeekday' | 'MonthlyByDayOfMonth';
 
@@ -164,6 +235,8 @@ export interface CourtBooking {
   courtCount: number;
   pricingTemplateId?: string;
   pricingTemplateName?: string;
+  expenseTemplateId?: string;
+  expenseTemplateName?: string;
   note?: string;
   generatedSessionCount: number;
   createdAt: string;
@@ -180,17 +253,181 @@ export interface CreateCourtBookingBody {
   endTime: string;
   courtCount: number;
   pricingTemplateId?: string;
+  expenseTemplateId?: string;
   note?: string;
+}
+
+export interface CourtBookingPreview {
+  count: number;
+  dates: string[];
+  estimatedExpense?: ResolvedExpenses;
+  estimatedTotalExpense: number;
 }
 
 export const listCourtBookings = () =>
   api.get<ApiResponse<CourtBooking[]>>('/court-bookings').then(r => r.data);
 export const previewCourtBooking = (body: CreateCourtBookingBody) =>
-  api.post<ApiResponse<{ count: number; dates: string[] }>>('/court-bookings/preview', body).then(r => r.data);
+  api.post<ApiResponse<CourtBookingPreview>>('/court-bookings/preview', body).then(r => r.data);
 export const createCourtBooking = (body: CreateCourtBookingBody) =>
   api.post<ApiResponse<CourtBooking>>('/court-bookings', body).then(r => r.data);
 export const deleteCourtBooking = (id: string) =>
   api.delete<ApiResponse<boolean>>(`/court-bookings/${id}`).then(r => r.data);
+
+// Player groups
+export interface PlayerGroup {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  groupType: PlayerGroupType;
+  isActive: boolean;
+  memberCount: number;
+}
+
+export interface PlayerGroupMemberView {
+  playerId: string;
+  fullName: string;
+  nickName?: string;
+  phoneNumber?: string;
+  gender?: Gender;
+  skillLevel?: SkillLevel;
+  isActive: boolean;
+  currentDebt: number;
+}
+
+export interface PlayerGroupDetail extends PlayerGroup {
+  members: PlayerGroupMemberView[];
+}
+
+export interface UpsertPlayerGroupBody {
+  name: string;
+  description?: string;
+  color?: string;
+  groupType: PlayerGroupType;
+  isActive: boolean;
+  playerIds: string[];
+}
+
+export const GROUP_TYPE_LABEL: Record<PlayerGroupType, string> = {
+  Fixed: 'Cố định',
+  Casual: 'Vãng lai',
+  Tournament: 'Đội thi đấu',
+  Other: 'Khác'
+};
+
+export const GROUP_TYPE_BADGE_CLS: Record<PlayerGroupType, string> = {
+  Fixed: 'paid',
+  Casual: 'partial',
+  Tournament: 'over',
+  Other: 'draft'
+};
+
+export const updatePlayer = (id: string, body: Partial<Player>) =>
+  api.put<ApiResponse<Player>>(`/players/${id}`, body).then(r => r.data);
+
+// Admin maintenance — wipe transactional data
+export interface WipeResult {
+  executedAt: string;
+  counts: Record<string, number>;
+  totalRowsDeleted: number;
+}
+export const wipeTransactional = (confirmation: string, reason?: string) =>
+  api.post<ApiResponse<WipeResult>>('/admin/maintenance/wipe-transactional',
+    { confirmation, reason }).then(r => r.data);
+
+export interface PreviewGroupPlayer {
+  playerId: string;
+  fullName: string;
+  phoneNumber?: string;
+  isActive: boolean;
+  currentDebt: number;
+  alreadyInSession: boolean;
+  groupIds: string[];
+}
+
+export interface PreviewGroup {
+  groupId: string;
+  name: string;
+  color?: string;
+  memberCount: number;
+  alreadyInSession: number;
+  newToAdd: number;
+  inactiveSkipped: number;
+  members: PreviewGroupPlayer[];
+}
+
+export interface PreviewAddGroupsResult {
+  groups: PreviewGroup[];
+  totalMembers: number;
+  uniquePlayers: number;
+  newToAdd: number;
+  alreadyInSession: number;
+  inactiveSkipped: number;
+  playersToAdd: PreviewGroupPlayer[];
+  inactivePlayers: PreviewGroupPlayer[];
+  debtPlayers: PreviewGroupPlayer[];
+  alreadyPlayers: PreviewGroupPlayer[];
+}
+
+export interface AddGroupsResult {
+  added: number;
+  skippedDuplicate: number;
+  skippedInactive: number;
+  addedPlayerIds: string[];
+  appliedGroupIds: string[];
+  participantCount: number;
+  totalSlots: number;
+}
+
+export interface SessionGroupHistory {
+  id: string;
+  sessionId: string;
+  sessionTitle?: string;
+  sessionPlayDate: string;
+  playerGroupId: string;
+  groupNameSnapshot: string;
+  membersTotal: number;
+  membersAdded: number;
+  membersSkippedDuplicate: number;
+  membersSkippedInactive: number;
+  appliedAt: string;
+}
+
+export const listPlayerGroups = (search?: string, page = 1, pageSize = 100) =>
+  api.get<ApiResponse<{ items: PlayerGroup[]; total: number }>>('/player-groups',
+    { params: { search, page, pageSize } }).then(r => r.data);
+export const getPlayerGroup = (id: string) =>
+  api.get<ApiResponse<PlayerGroupDetail>>(`/player-groups/${id}`).then(r => r.data);
+export const createPlayerGroup = (body: UpsertPlayerGroupBody) =>
+  api.post<ApiResponse<PlayerGroup>>('/player-groups', body).then(r => r.data);
+export const updatePlayerGroup = (id: string, body: UpsertPlayerGroupBody) =>
+  api.put<ApiResponse<PlayerGroup>>(`/player-groups/${id}`, body).then(r => r.data);
+export const deletePlayerGroup = (id: string) =>
+  api.delete<ApiResponse<boolean>>(`/player-groups/${id}`).then(r => r.data);
+export const addGroupMembers = (groupId: string, playerIds: string[]) =>
+  api.post<ApiResponse<PlayerGroupDetail>>('/player-groups/members/add',
+    { groupId, playerIds }).then(r => r.data);
+export const removeGroupMembers = (groupId: string, playerIds: string[]) =>
+  api.post<ApiResponse<PlayerGroupDetail>>('/player-groups/members/remove',
+    { groupId, playerIds }).then(r => r.data);
+export const getGroupUsageHistory = (groupId: string) =>
+  api.get<ApiResponse<SessionGroupHistory[]>>(`/player-groups/${groupId}/usage-history`).then(r => r.data);
+
+export const previewAddGroupsToSession = (sessionId: string, groupIds: string[], includeInactive = false) =>
+  api.post<ApiResponse<PreviewAddGroupsResult>>('/sessions/groups/preview',
+    { sessionId, groupIds, includeInactive }).then(r => r.data);
+export const addGroupsToSession = (
+  sessionId: string, groupIds: string[],
+  opts: { includeInactive?: boolean; slotCount?: number; selectedPlayerIds?: string[] } = {}
+) =>
+  api.post<ApiResponse<AddGroupsResult>>('/sessions/groups/add', {
+    sessionId, groupIds,
+    includeInactive: opts.includeInactive ?? false,
+    slotCount: opts.slotCount ?? 1,
+    selectedPlayerIds: opts.selectedPlayerIds ?? []
+  }).then(r => r.data);
+export const getSessionGroups = (sessionId: string) =>
+  api.get<ApiResponse<SessionGroupHistory[]>>(`/sessions/${sessionId}/groups`).then(r => r.data);
 
 // CSV export — return blob URLs caller can download
 export const exportDebtsCsvUrl = () => `${import.meta.env.VITE_API_URL || '/api'}/admin/export/debts.csv`;

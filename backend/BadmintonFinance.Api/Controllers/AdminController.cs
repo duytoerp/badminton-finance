@@ -15,10 +15,12 @@ public class AdminController : ControllerBase
     private readonly IUserService _users;
     private readonly IReportService _reports;
     private readonly IPlayerHistoryService _history;
+    private readonly IAdminMaintenanceService _maintenance;
 
-    public AdminController(IAuditLogService audit, IUserService users, IReportService reports, IPlayerHistoryService history)
+    public AdminController(IAuditLogService audit, IUserService users, IReportService reports,
+        IPlayerHistoryService history, IAdminMaintenanceService maintenance)
     {
-        _audit = audit; _users = users; _reports = reports; _history = history;
+        _audit = audit; _users = users; _reports = reports; _history = history; _maintenance = maintenance;
     }
 
     // ---- Audit ----
@@ -84,6 +86,16 @@ public class AdminController : ControllerBase
             sb.AppendLine($"{s.PlayDate:yyyy-MM-dd},{Csv(s.Title)},{Csv(s.CourtName)},{s.Status},{s.TotalIncome},{s.TotalExpense},{s.Balance},{s.FeePerSlot},{s.TotalSlots}");
         return File(new UTF8Encoding(true).GetBytes(sb.ToString()), "text/csv", $"finance_{from:yyyyMMdd}_{to:yyyyMMdd}.csv");
     }
+
+    // ---- Maintenance: wipe transactional data (Admin only) ----
+    /// <summary>
+    /// Wipes all transactional data. Master data (users, courts, pricing/expense templates) is preserved.
+    /// Body must include <c>confirmation: "XOA TAT CA"</c>. Restricted to <c>Admin</c> role.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPost("maintenance/wipe-transactional")]
+    public async Task<ApiResponse<WipeTransactionalResultDto>> WipeTransactional(WipeTransactionalDto dto, CancellationToken ct)
+        => ApiResponse<WipeTransactionalResultDto>.Ok(await _maintenance.WipeTransactionalAsync(dto, ct));
 
     private static string Csv(string? s)
     {

@@ -4,22 +4,36 @@ interface AuthState {
   token: string | null;
   userName: string | null;
   fullName: string | null;
-  setAuth: (token: string, userName: string, fullName: string) => void;
+  roles: string[];
+  setAuth: (token: string, userName: string, fullName: string, roles?: string[]) => void;
   logout: () => void;
+  isAdmin: () => boolean;
 }
 
-export const useAuth = create<AuthState>((set) => ({
+function readRoles(): string[] {
+  try {
+    const raw = localStorage.getItem('user_roles');
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export const useAuth = create<AuthState>((set, get) => ({
   token: localStorage.getItem('access_token'),
   userName: localStorage.getItem('user_name'),
   fullName: localStorage.getItem('full_name'),
-  setAuth: (token, userName, fullName) => {
+  roles: readRoles(),
+  setAuth: (token, userName, fullName, roles = []) => {
     localStorage.setItem('access_token', token);
     localStorage.setItem('user_name', userName);
     localStorage.setItem('full_name', fullName);
-    set({ token, userName, fullName });
+    localStorage.setItem('user_roles', JSON.stringify(roles));
+    set({ token, userName, fullName, roles });
   },
   logout: () => {
     localStorage.clear();
-    set({ token: null, userName: null, fullName: null });
-  }
+    set({ token: null, userName: null, fullName: null, roles: [] });
+  },
+  isAdmin: () => get().roles.includes('Admin')
 }));

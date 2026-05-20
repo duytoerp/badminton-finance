@@ -28,12 +28,44 @@ public interface ISessionService
     Task<SessionDetailDto> GetDetailAsync(Guid id, CancellationToken ct = default);
     Task<SessionDto> CreateAsync(CreateSessionDto dto, CancellationToken ct = default);
     Task<ApiResponse<ParticipantDto>> AddParticipantAsync(AddParticipantDto dto, CancellationToken ct = default);
+    Task<ApiResponse<AddParticipantsBulkResultDto>> AddParticipantsBulkAsync(AddParticipantsBulkDto dto, CancellationToken ct = default);
     Task RemoveParticipantAsync(Guid participantId, CancellationToken ct = default);
     Task<TransactionDto> AddExpenseAsync(CreateExpenseDto dto, CancellationToken ct = default);
     Task<ApiResponse<TransactionDto>> QuickPaymentAsync(QuickPaymentDto dto, CancellationToken ct = default);
     Task<SessionDto> CloseSessionAsync(Guid sessionId, CancellationToken ct = default);
     Task<SessionDto> ReopenSessionAsync(ReopenSessionDto dto, CancellationToken ct = default);
     Task<SessionDto> CancelSessionAsync(CancelSessionDto dto, CancellationToken ct = default);
+    Task<PreviewAddGroupsResultDto> PreviewAddGroupsAsync(PreviewAddGroupsDto dto, CancellationToken ct = default);
+    Task<ApiResponse<AddGroupsToSessionResultDto>> AddGroupsAsync(AddGroupsToSessionDto dto, CancellationToken ct = default);
+    Task<IEnumerable<SessionGroupHistoryDto>> GetSessionGroupsAsync(Guid sessionId, CancellationToken ct = default);
+}
+
+public interface IExpenseTemplateService
+{
+    Task<IEnumerable<ExpenseTemplateDto>> ListAsync(CancellationToken ct = default);
+    Task<ExpenseTemplateDto> GetAsync(Guid id, CancellationToken ct = default);
+    Task<ExpenseTemplateDto?> GetDefaultAsync(CancellationToken ct = default);
+    Task<ExpenseTemplateDto> CreateAsync(UpsertExpenseTemplateDto dto, CancellationToken ct = default);
+    Task<ExpenseTemplateDto> UpdateAsync(Guid id, UpsertExpenseTemplateDto dto, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolve a template into concrete lines for a given booking shape. If templateId is null, falls back to default.
+    /// Returns null lines when no template applies.
+    /// </summary>
+    Task<ResolvedExpensesDto> ResolveAsync(Guid? templateId, Guid courtId, TimeSpan start, TimeSpan end, int courtCount, CancellationToken ct = default);
+}
+
+public interface IPlayerGroupService
+{
+    Task<PagedResult<PlayerGroupDto>> ListAsync(PagedQuery q, CancellationToken ct = default);
+    Task<PlayerGroupDetailDto> GetAsync(Guid id, CancellationToken ct = default);
+    Task<PlayerGroupDto> CreateAsync(UpsertPlayerGroupDto dto, CancellationToken ct = default);
+    Task<PlayerGroupDto> UpdateAsync(Guid id, UpsertPlayerGroupDto dto, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<PlayerGroupDetailDto> AddMembersAsync(GroupMembersDto dto, CancellationToken ct = default);
+    Task<PlayerGroupDetailDto> RemoveMembersAsync(GroupMembersDto dto, CancellationToken ct = default);
+    Task<IEnumerable<SessionGroupHistoryDto>> GetUsageHistoryAsync(Guid groupId, CancellationToken ct = default);
 }
 
 public interface IDashboardService
@@ -93,6 +125,16 @@ public interface IReportService
 {
     Task<FinanceReportDto> GetReportAsync(DateTime from, DateTime to, CancellationToken ct = default);
     Task<IEnumerable<DebtSummaryDto>> GetDebtsAsync(CancellationToken ct = default);
+}
+
+public interface IAdminMaintenanceService
+{
+    /// <summary>
+    /// Wipes all transactional data after verifying the confirmation phrase.
+    /// Master data (users, roles, courts, pricing/expense templates, system config) is kept.
+    /// Throws <see cref="Domain.Exceptions.BusinessRuleException"/> if confirmation is wrong.
+    /// </summary>
+    Task<WipeTransactionalResultDto> WipeTransactionalAsync(WipeTransactionalDto dto, CancellationToken ct = default);
 }
 
 public interface IAuthService

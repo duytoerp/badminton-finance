@@ -80,5 +80,29 @@ public static class DbSeeder
             );
             db.SaveChanges();
         }
+
+        if (!db.ExpenseTemplates.Any())
+        {
+            var def = new ExpenseTemplate
+            {
+                Name = "Mặc định",
+                Description = "Tiền sân tính theo giá giờ × số giờ × số sân.",
+                IsDefault = true, IsActive = true
+            };
+            def.Items.Add(new ExpenseTemplateItem
+            {
+                Name = "Tiền sân",
+                CalculationType = ExpenseCalculationType.CourtHourlyRate,
+                Amount = 0, SortOrder = 0
+            });
+            def.Items.Add(new ExpenseTemplateItem
+            {
+                Name = "Tiền cầu (dự kiến)",
+                CalculationType = ExpenseCalculationType.FixedAmount,
+                Amount = 0, SortOrder = 1
+            });
+            db.ExpenseTemplates.Add(def);
+            db.SaveChanges();
+        }
     }
 }

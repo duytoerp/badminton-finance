@@ -76,6 +76,41 @@ public enum BookingRecurrenceType
 }
 
 /// <summary>
+/// Classifies a BadmintonPlayerGroup: regulars (Fixed), guests/walk-ins (Casual), tournament squad, or other.
+/// Carried on the group itself and snapshotted onto SessionParticipant.JoinedViaGroupType when applied.
+/// </summary>
+public enum PlayerGroupType
+{
+    /// <summary>Cố định — nhóm thành viên thường xuyên.</summary>
+    Fixed = 0,
+    /// <summary>Vãng lai — người chơi không cố định.</summary>
+    Casual = 1,
+    /// <summary>Đội thi đấu.</summary>
+    Tournament = 2,
+    /// <summary>Khác / chưa phân loại.</summary>
+    Other = 99
+}
+
+/// <summary>
+/// How a single ExpenseTemplateItem's amount is computed for a given session/booking.
+/// All formulas read the booking's hours (EndTime − StartTime) and CourtCount; the court's current
+/// DefaultHourlyRate is read for CourtHourlyRate at apply time (not snapshot — picks up current rate).
+/// </summary>
+public enum ExpenseCalculationType
+{
+    /// <summary>Amount used as-is (e.g. shuttlecock budget).</summary>
+    FixedAmount = 0,
+    /// <summary>Hours × Court.DefaultHourlyRate × CourtCount. Amount field is ignored.</summary>
+    CourtHourlyRate = 1,
+    /// <summary>Amount × Hours.</summary>
+    PerHour = 2,
+    /// <summary>Amount × CourtCount.</summary>
+    PerCourt = 3,
+    /// <summary>Amount × Hours × CourtCount.</summary>
+    PerHourPerCourt = 4
+}
+
+/// <summary>
 /// How a pricing template distributes the session expense across participants.
 /// </summary>
 public enum PricingMode

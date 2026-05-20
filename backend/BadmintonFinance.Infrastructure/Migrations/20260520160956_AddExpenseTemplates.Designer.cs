@@ -4,6 +4,7 @@ using BadmintonFinance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BadmintonFinance.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520160956_AddExpenseTemplates")]
+    partial class AddExpenseTemplates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,9 +312,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("GroupType")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -557,16 +557,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                     b.Property<bool>("IsGuest")
                         .HasColumnType("bit");
 
-                    b.Property<Guid?>("JoinedViaGroupId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("JoinedViaGroupName")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int?>("JoinedViaGroupType")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("Multiplier")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(5,2)")
@@ -594,8 +584,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("JoinedViaGroupId");
 
                     b.HasIndex("PlayerId");
 
@@ -1166,11 +1154,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonSessionParticipant", b =>
                 {
-                    b.HasOne("BadmintonFinance.Domain.Entities.BadmintonPlayerGroup", "JoinedViaGroup")
-                        .WithMany()
-                        .HasForeignKey("JoinedViaGroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("BadmintonFinance.Domain.Entities.BadmintonPlayer", "Player")
                         .WithMany("Participations")
                         .HasForeignKey("PlayerId")
@@ -1182,8 +1165,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("JoinedViaGroup");
 
                     b.Navigation("Player");
 

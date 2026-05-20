@@ -25,4 +25,17 @@ public class BadmintonSessionParticipant : BaseEntity
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
     public bool IsGuest { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>
+    /// If the participant was added by applying a PlayerGroup, this references that group.
+    /// Null when added one-off ("Thêm cá nhân"). Used to show "(qua nhóm X)" in player history.
+    /// </summary>
+    public Guid? JoinedViaGroupId { get; set; }
+    public BadmintonPlayerGroup? JoinedViaGroup { get; set; }
+
+    /// <summary>Snapshot of the group's GroupType at apply time — survives later group edits/deletes.</summary>
+    public PlayerGroupType? JoinedViaGroupType { get; set; }
+
+    /// <summary>Snapshot of the group's Name at apply time — survives later group renames/deletes.</summary>
+    public string? JoinedViaGroupName { get; set; }
 }

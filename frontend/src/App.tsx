@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import Players from './pages/Players';
 import PlayerDetail from './pages/PlayerDetail';
+import PlayerGroups from './pages/PlayerGroups';
 import Sessions from './pages/Sessions';
 import SessionDetail from './pages/SessionDetail';
 import Fund from './pages/Fund';
@@ -14,6 +15,8 @@ import Bookings from './pages/Bookings';
 import UsersAdmin from './pages/admin/Users';
 import AuditLog from './pages/admin/AuditLog';
 import PricingTemplatesAdmin from './pages/admin/PricingTemplates';
+import ExpenseTemplatesAdmin from './pages/admin/ExpenseTemplates';
+import MaintenanceAdmin from './pages/admin/Maintenance';
 import Login from './pages/Login';
 import { useAuth } from './store/auth';
 import { useIsDesktop } from './hooks/useBreakpoint';
@@ -40,6 +43,7 @@ export default function App() {
         <Route path="/dashboard"   element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/players"     element={<RequireAuth><Players /></RequireAuth>} />
         <Route path="/players/:id" element={<RequireAuth><PlayerDetail /></RequireAuth>} />
+        <Route path="/player-groups" element={<RequireAuth><PlayerGroups /></RequireAuth>} />
         <Route path="/sessions"    element={<RequireAuth><Sessions /></RequireAuth>} />
         <Route path="/sessions/:id" element={<RequireAuth><SessionDetail /></RequireAuth>} />
         <Route path="/courts"      element={<RequireAuth><Courts /></RequireAuth>} />
@@ -50,6 +54,8 @@ export default function App() {
         <Route path="/admin/users" element={<RequireAuth><UsersAdmin /></RequireAuth>} />
         <Route path="/admin/audit" element={<RequireAuth><AuditLog /></RequireAuth>} />
         <Route path="/admin/pricing-templates" element={<RequireAuth><PricingTemplatesAdmin /></RequireAuth>} />
+        <Route path="/admin/expense-templates" element={<RequireAuth><ExpenseTemplatesAdmin /></RequireAuth>} />
+        <Route path="/admin/maintenance" element={<RequireAuth><MaintenanceAdmin /></RequireAuth>} />
         <Route path="*"            element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>

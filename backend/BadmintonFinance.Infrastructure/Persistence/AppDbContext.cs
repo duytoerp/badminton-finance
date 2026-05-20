@@ -22,6 +22,11 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<BadmintonPlayerGroup> PlayerGroups => Set<BadmintonPlayerGroup>();
+    public DbSet<BadmintonPlayerGroupMember> PlayerGroupMembers => Set<BadmintonPlayerGroupMember>();
+    public DbSet<BadmintonSessionGroup> SessionGroups => Set<BadmintonSessionGroup>();
+    public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
+    public DbSet<ExpenseTemplateItem> ExpenseTemplateItems => Set<ExpenseTemplateItem>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -72,6 +77,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Note).HasMaxLength(1000);
             e.HasOne(x => x.Court).WithMany().HasForeignKey(x => x.CourtId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.PricingTemplate).WithMany().HasForeignKey(x => x.PricingTemplateId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.ExpenseTemplate).WithMany().HasForeignKey(x => x.ExpenseTemplateId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.CourtId, x.FromDate });
             e.HasQueryFilter(x => !x.IsDeleted);
         });
@@ -84,9 +90,12 @@ public class AppDbContext : DbContext
             e.Property(x => x.AmountPaid).HasColumnType("decimal(18,2)");
             e.Property(x => x.Multiplier).HasColumnType("decimal(5,2)").HasDefaultValue(1.0m);
             e.Property(x => x.FixedAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0m);
+            e.Property(x => x.JoinedViaGroupName).HasMaxLength(150);
             e.HasOne(x => x.Session).WithMany(s => s.Participants).HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Player).WithMany(p => p.Participations).HasForeignKey(x => x.PlayerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.JoinedViaGroup).WithMany().HasForeignKey(x => x.JoinedViaGroupId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.SessionId, x.PlayerId }).IsUnique();
+            e.HasIndex(x => x.JoinedViaGroupId);
         });
 
         b.Entity<PricingTemplate>(e =>
@@ -174,6 +183,57 @@ public class AppDbContext : DbContext
             e.HasKey(x => new { x.UserId, x.RoleId });
             e.HasOne(x => x.User).WithMany(u => u.UserRoles).HasForeignKey(x => x.UserId);
             e.HasOne(x => x.Role).WithMany(r => r.UserRoles).HasForeignKey(x => x.RoleId);
+        });
+
+        b.Entity<BadmintonPlayerGroup>(e =>
+        {
+            e.ToTable("BadmintonPlayerGroup");
+            e.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.Color).HasMaxLength(20);
+            e.HasIndex(x => x.Name);
+            e.HasQueryFilter(x => !x.IsDeleted);
+        });
+
+        b.Entity<BadmintonPlayerGroupMember>(e =>
+        {
+            e.ToTable("BadmintonPlayerGroupMember");
+            e.HasOne(x => x.PlayerGroup).WithMany(g => g.Members)
+                .HasForeignKey(x => x.PlayerGroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Player).WithMany()
+                .HasForeignKey(x => x.PlayerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.PlayerGroupId, x.PlayerId }).IsUnique();
+        });
+
+        b.Entity<ExpenseTemplate>(e =>
+        {
+            e.ToTable("ExpenseTemplate");
+            e.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.HasIndex(x => new { x.IsDefault, x.IsActive });
+            e.HasQueryFilter(x => !x.IsDeleted);
+        });
+
+        b.Entity<ExpenseTemplateItem>(e =>
+        {
+            e.ToTable("ExpenseTemplateItem");
+            e.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.ExpenseTemplate).WithMany(t => t.Items)
+                .HasForeignKey(x => x.ExpenseTemplateId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ExpenseTemplateId, x.SortOrder });
+        });
+
+        b.Entity<BadmintonSessionGroup>(e =>
+        {
+            e.ToTable("BadmintonSessionGroup");
+            e.Property(x => x.GroupNameSnapshot).HasMaxLength(150).IsRequired();
+            e.HasOne(x => x.Session).WithMany()
+                .HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.PlayerGroup).WithMany(g => g.SessionGroups)
+                .HasForeignKey(x => x.PlayerGroupId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.SessionId, x.PlayerGroupId });
+            e.HasIndex(x => x.PlayerGroupId);
         });
     }
 }

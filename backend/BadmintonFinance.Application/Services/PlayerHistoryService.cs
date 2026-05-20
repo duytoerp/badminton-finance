@@ -27,7 +27,10 @@ public class PlayerHistoryService : IPlayerHistoryService
                 PlayerName = player.FullName,
                 SlotCount = x.SlotCount, AmountDue = x.AmountDue, AmountPaid = x.AmountPaid,
                 Debt = x.AmountDue - x.AmountPaid, PaymentStatus = x.PaymentStatus,
-                IsGuest = x.IsGuest, Note = x.Note
+                IsGuest = x.IsGuest, Note = x.Note,
+                JoinedViaGroupId = x.JoinedViaGroupId,
+                JoinedViaGroupName = x.JoinedViaGroupName,
+                JoinedViaGroupType = x.JoinedViaGroupType
             }).ToListAsync(ct);
 
         return new PlayerHistoryDto

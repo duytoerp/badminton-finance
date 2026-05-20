@@ -16,7 +16,7 @@ export default function Login() {
     setBusy(true); setErr(null);
     try {
       const res = await login(u, p);
-      setAuth(res.data.accessToken, res.data.userName, res.data.fullName);
+      setAuth(res.data.accessToken, res.data.userName, res.data.fullName, res.data.roles || []);
       nav('/', { replace: true });
     } catch (e: any) {
       setErr(e?.response?.data?.message || 'Đăng nhập thất bại');

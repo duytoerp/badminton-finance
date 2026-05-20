@@ -12,33 +12,44 @@ public class CourtBookingService : ICourtBookingService
 {
     private readonly DbContext _db;
     private readonly IPricingService _pricing;
+    private readonly IExpenseTemplateService _expense;
     private readonly IAuditLogger _audit;
 
-    public CourtBookingService(DbContext db, IPricingService pricing, IAuditLogger audit)
+    public CourtBookingService(DbContext db, IPricingService pricing, IExpenseTemplateService expense, IAuditLogger audit)
     {
-        _db = db; _pricing = pricing; _audit = audit;
+        _db = db; _pricing = pricing; _expense = expense; _audit = audit;
     }
 
     public async Task<IEnumerable<CourtBookingDto>> ListAsync(CancellationToken ct = default)
         => await _db.Set<CourtBooking>().AsNoTracking()
             .Include(b => b.Court)
             .Include(b => b.PricingTemplate)
+            .Include(b => b.ExpenseTemplate)
             .OrderByDescending(b => b.CreatedAt)
             .Select(b => ToDto(b)).ToListAsync(ct);
 
     public async Task<CourtBookingDto> GetAsync(Guid id, CancellationToken ct = default)
     {
         var b = await _db.Set<CourtBooking>().AsNoTracking()
-            .Include(x => x.Court).Include(x => x.PricingTemplate)
+            .Include(x => x.Court).Include(x => x.PricingTemplate).Include(x => x.ExpenseTemplate)
             .FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new NotFoundException(nameof(CourtBooking), id);
         return ToDto(b);
     }
 
-    public Task<CourtBookingPreviewDto> PreviewAsync(CreateCourtBookingDto dto, CancellationToken ct = default)
+    public async Task<CourtBookingPreviewDto> PreviewAsync(CreateCourtBookingDto dto, CancellationToken ct = default)
     {
         var dates = ExpandDates(dto);
-        return Task.FromResult(new CourtBookingPreviewDto { Count = dates.Count, Dates = dates });
+        var preview = new CourtBookingPreviewDto { Count = dates.Count, Dates = dates };
+
+        if (dto.CourtId != Guid.Empty && dates.Count > 0)
+        {
+            var resolved = await _expense.ResolveAsync(
+                dto.ExpenseTemplateId, dto.CourtId, dto.StartTime, dto.EndTime, dto.CourtCount, ct);
+            preview.EstimatedExpense = resolved;
+            preview.EstimatedTotalExpense = resolved.Total * dates.Count;
+        }
+        return preview;
     }
 
     public async Task<CourtBookingDto> CreateAsync(CreateCourtBookingDto dto, CancellationToken ct = default)
@@ -58,6 +69,10 @@ public class CourtBookingService : ICourtBookingService
         }
         var mode = await _pricing.GetModeAsync(templateId, ct);
 
+        // Resolve expense template (caller's choice, else system default)
+        var expense = await _expense.ResolveAsync(
+            dto.ExpenseTemplateId, dto.CourtId, dto.StartTime, dto.EndTime, dto.CourtCount, ct);
+
         var fromDate = dates.Min().Date;
         var toDate = dates.Max().Date;
 
@@ -73,6 +88,7 @@ public class CourtBookingService : ICourtBookingService
             EndTime = dto.EndTime,
             CourtCount = dto.CourtCount,
             PricingTemplateId = templateId,
+            ExpenseTemplateId = expense.ExpenseTemplateId,
             Note = dto.Note,
             GeneratedSessionCount = dates.Count
         };
@@ -96,15 +112,43 @@ public class CourtBookingService : ICourtBookingService
             };
             booking.Sessions.Add(session);
             _db.Add(session);
+
+            // Auto-create expense transactions from template
+            foreach (var line in expense.Lines.Where(l => l.Amount > 0))
+            {
+                _db.Add(new BadmintonTransaction
+                {
+                    SessionId = session.Id,
+                    TransactionType = TransactionType.Expense,
+                    PaymentMethod = PaymentMethod.Cash,
+                    Amount = line.Amount,
+                    Description = line.Name,
+                    TransactionDate = DateTime.UtcNow
+                });
+            }
+            // Cache the total so list views show the right number until first participant is added.
+            session.TotalExpense = expense.Total;
+            session.Balance = -expense.Total;
         }
 
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(nameof(CourtBooking), booking.Id.ToString(), "Create",
-            null, new { booking.RecurrenceType, booking.Pattern, booking.FromDate, booking.ToDate, booking.GeneratedSessionCount },
-            null, ct);
+            null, new
+            {
+                booking.RecurrenceType, booking.Pattern, booking.FromDate, booking.ToDate,
+                booking.GeneratedSessionCount,
+                ExpenseTemplate = expense.ExpenseTemplateName,
+                EstimatedExpensePerSession = expense.Total,
+                EstimatedTotal = expense.Total * dates.Count
+            }, null, ct);
 
         booking.Court = court;
+        if (expense.ExpenseTemplateId.HasValue)
+        {
+            booking.ExpenseTemplate = await _db.Set<ExpenseTemplate>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == expense.ExpenseTemplateId.Value, ct);
+        }
         return ToDto(booking);
     }
 
@@ -193,6 +237,8 @@ public class CourtBookingService : ICourtBookingService
         CourtCount = b.CourtCount,
         PricingTemplateId = b.PricingTemplateId,
         PricingTemplateName = b.PricingTemplate?.Name,
+        ExpenseTemplateId = b.ExpenseTemplateId,
+        ExpenseTemplateName = b.ExpenseTemplate?.Name,
         Note = b.Note,
         GeneratedSessionCount = b.GeneratedSessionCount,
         CreatedAt = b.CreatedAt

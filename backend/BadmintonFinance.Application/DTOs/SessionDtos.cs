@@ -72,6 +72,10 @@ public class ParticipantDto
     public PaymentStatus PaymentStatus { get; set; }
     public bool IsGuest { get; set; }
     public string? Note { get; set; }
+
+    public Guid? JoinedViaGroupId { get; set; }
+    public string? JoinedViaGroupName { get; set; }
+    public PlayerGroupType? JoinedViaGroupType { get; set; }
 }
 
 public class AddParticipantDto
@@ -80,6 +84,25 @@ public class AddParticipantDto
     public Guid PlayerId { get; set; }
     public int SlotCount { get; set; } = 1;
     public string? Note { get; set; }
+}
+
+public class AddParticipantsBulkDto
+{
+    public Guid SessionId { get; set; }
+    public List<Guid> PlayerIds { get; set; } = new();
+    public int SlotCount { get; set; } = 1;
+    /// <summary>If true, also add inactive players. Defaults to false (they get skipped).</summary>
+    public bool IncludeInactive { get; set; }
+}
+
+public class AddParticipantsBulkResultDto
+{
+    public int Added { get; set; }
+    public int SkippedDuplicate { get; set; }
+    public int SkippedInactive { get; set; }
+    public List<Guid> AddedPlayerIds { get; set; } = new();
+    public int ParticipantCount { get; set; }
+    public int TotalSlots { get; set; }
 }
 
 public class UpdateParticipantDto

@@ -21,6 +21,9 @@ public class CourtBookingDto
     public Guid? PricingTemplateId { get; set; }
     public string? PricingTemplateName { get; set; }
 
+    public Guid? ExpenseTemplateId { get; set; }
+    public string? ExpenseTemplateName { get; set; }
+
     public string? Note { get; set; }
     public int GeneratedSessionCount { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -46,6 +49,7 @@ public class CreateCourtBookingDto
     public int CourtCount { get; set; } = 1;
 
     public Guid? PricingTemplateId { get; set; }
+    public Guid? ExpenseTemplateId { get; set; }
     public string? Note { get; set; }
 }
 
@@ -53,4 +57,6 @@ public class CourtBookingPreviewDto
 {
     public int Count { get; set; }
     public List<DateTime> Dates { get; set; } = new();
+    public ResolvedExpensesDto? EstimatedExpense { get; set; }
+    public decimal EstimatedTotalExpense { get; set; }
 }

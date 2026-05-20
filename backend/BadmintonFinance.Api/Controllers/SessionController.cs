@@ -37,6 +37,10 @@ public class SessionController : ControllerBase
     public async Task<ApiResponse<ParticipantDto>> AddParticipant(AddParticipantDto dto, CancellationToken ct)
         => await _svc.AddParticipantAsync(dto, ct);
 
+    [HttpPost("participants/bulk")]
+    public async Task<ApiResponse<AddParticipantsBulkResultDto>> AddParticipantsBulk(AddParticipantsBulkDto dto, CancellationToken ct)
+        => await _svc.AddParticipantsBulkAsync(dto, ct);
+
     [HttpDelete("participants/{participantId}")]
     public async Task<ApiResponse<bool>> RemoveParticipant(Guid participantId, CancellationToken ct)
     {
@@ -59,4 +63,16 @@ public class SessionController : ControllerBase
     [HttpPost("reopen")]
     public async Task<ApiResponse<SessionDto>> Reopen(ReopenSessionDto dto, CancellationToken ct)
         => ApiResponse<SessionDto>.Ok(await _svc.ReopenSessionAsync(dto, ct));
+
+    [HttpPost("groups/preview")]
+    public async Task<ApiResponse<PreviewAddGroupsResultDto>> PreviewGroups(PreviewAddGroupsDto dto, CancellationToken ct)
+        => ApiResponse<PreviewAddGroupsResultDto>.Ok(await _svc.PreviewAddGroupsAsync(dto, ct));
+
+    [HttpPost("groups/add")]
+    public async Task<ApiResponse<AddGroupsToSessionResultDto>> AddGroups(AddGroupsToSessionDto dto, CancellationToken ct)
+        => await _svc.AddGroupsAsync(dto, ct);
+
+    [HttpGet("{id}/groups")]
+    public async Task<ApiResponse<IEnumerable<SessionGroupHistoryDto>>> SessionGroups(Guid id, CancellationToken ct)
+        => ApiResponse<IEnumerable<SessionGroupHistoryDto>>.Ok(await _svc.GetSessionGroupsAsync(id, ct));
 }

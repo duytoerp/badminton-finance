@@ -51,6 +51,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPlayerHistoryService, PlayerHistoryService>();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<ICourtBookingService, CourtBookingService>();
+builder.Services.AddScoped<IPlayerGroupService, PlayerGroupService>();
+builder.Services.AddScoped<IExpenseTemplateService, ExpenseTemplateService>();
+builder.Services.AddScoped<IAdminMaintenanceService, AdminMaintenanceService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddHttpContextAccessor();
 

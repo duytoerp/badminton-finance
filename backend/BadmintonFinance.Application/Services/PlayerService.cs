@@ -29,7 +29,9 @@ public class PlayerService : IPlayerService
             {
                 Id = p.Id, FullName = p.FullName, NickName = p.NickName,
                 PhoneNumber = p.PhoneNumber, Email = p.Email,
-                PlayerType = p.PlayerType, IsActive = p.IsActive,
+                PlayerType = p.PlayerType,
+                Gender = p.Gender, SkillLevel = p.SkillLevel,
+                IsActive = p.IsActive,
                 CurrentDebt = p.CurrentDebt, Note = p.Note
             }).ToListAsync(ct);
         return new PagedResult<PlayerDto> { Items = items, Total = total, Page = q.Page, PageSize = q.PageSize };

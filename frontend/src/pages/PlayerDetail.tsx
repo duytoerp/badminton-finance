@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AppBar from '../components/layout/AppBar';
 import { PageHeader } from '../components/layout/Shell';
 import { useIsDesktop } from '../hooks/useBreakpoint';
-import { getPlayerHistory } from '../api/endpoints';
+import { getPlayerHistory, GROUP_TYPE_LABEL, GROUP_TYPE_BADGE_CLS, PlayerGroupType } from '../api/endpoints';
 import { PaymentBadge } from '../components/common/StatusBadge';
 import DataTable, { Column } from '../components/common/DataTable';
 
@@ -26,6 +26,13 @@ export default function PlayerDetail() {
     { key: 'date', header: 'Buổi (Session)', sortable: true,
       accessor: r => r.sessionId,
       render: r => <a href="#" onClick={(e) => { e.preventDefault(); nav(`/sessions/${r.sessionId}`); }}>{r.sessionId.slice(0, 8)}…</a> },
+    { key: 'via', header: 'Vào qua', accessor: r => r.joinedViaGroupName || '',
+      render: r => r.joinedViaGroupName
+        ? <span className={'badge ' + (r.joinedViaGroupType ? GROUP_TYPE_BADGE_CLS[r.joinedViaGroupType as PlayerGroupType] : 'draft')}
+            title={r.joinedViaGroupType ? GROUP_TYPE_LABEL[r.joinedViaGroupType as PlayerGroupType] : ''}>
+            {r.joinedViaGroupName}
+          </span>
+        : <span className="card-sub">Cá nhân</span> },
     { key: 'slots', header: 'Suất', className: 'num', accessor: r => r.slotCount },
     { key: 'due', header: 'Phải trả', className: 'num', sortable: true, accessor: r => r.amountDue,
       render: r => fmt(r.amountDue) },
@@ -58,6 +65,11 @@ export default function PlayerDetail() {
                 <div>
                   <div className="card-title">Buổi {p.sessionId.slice(0, 8)}…</div>
                   <div className="card-sub">{p.slotCount} suất · {fmt(p.amountDue)}</div>
+                  <div className="card-sub" style={{ marginTop: 4 }}>
+                    {p.joinedViaGroupName
+                      ? <>Vào qua: <span className={'badge ' + (p.joinedViaGroupType ? GROUP_TYPE_BADGE_CLS[p.joinedViaGroupType as PlayerGroupType] : 'draft')}>{p.joinedViaGroupName}</span></>
+                      : 'Thêm cá nhân'}
+                  </div>
                 </div>
                 <PaymentBadge status={p.paymentStatus} />
               </div>

@@ -52,6 +52,16 @@ public class AddParticipantValidator : AbstractValidator<AddParticipantDto>
     }
 }
 
+public class AddParticipantsBulkValidator : AbstractValidator<AddParticipantsBulkDto>
+{
+    public AddParticipantsBulkValidator()
+    {
+        RuleFor(x => x.SessionId).NotEmpty();
+        RuleFor(x => x.PlayerIds).NotEmpty().WithMessage("Phải chọn ít nhất 1 người.");
+        RuleFor(x => x.SlotCount).GreaterThan(0).LessThanOrEqualTo(10);
+    }
+}
+
 public class CreateExpenseValidator : AbstractValidator<CreateExpenseDto>
 {
     public CreateExpenseValidator()
@@ -121,6 +131,71 @@ public class CreateCourtBookingValidator : AbstractValidator<CreateCourtBookingD
             x.RecurrenceType == Domain.Enums.BookingRecurrenceType.SingleDates ||
             (x.FromDate.HasValue && x.ToDate.HasValue && x.ToDate.Value.Date >= x.FromDate.Value.Date))
             .WithMessage("FromDate/ToDate is required and ToDate must be on or after FromDate for monthly recurrence.");
+    }
+}
+
+public class UpsertPlayerGroupValidator : AbstractValidator<UpsertPlayerGroupDto>
+{
+    public UpsertPlayerGroupValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Description).MaximumLength(500);
+        RuleFor(x => x.Color).MaximumLength(20);
+    }
+}
+
+public class GroupMembersValidator : AbstractValidator<GroupMembersDto>
+{
+    public GroupMembersValidator()
+    {
+        RuleFor(x => x.GroupId).NotEmpty();
+        RuleFor(x => x.PlayerIds).NotNull();
+    }
+}
+
+public class PreviewAddGroupsValidator : AbstractValidator<PreviewAddGroupsDto>
+{
+    public PreviewAddGroupsValidator()
+    {
+        RuleFor(x => x.SessionId).NotEmpty();
+        RuleFor(x => x.GroupIds).NotEmpty().WithMessage("Phải chọn ít nhất 1 nhóm.");
+    }
+}
+
+public class AddGroupsToSessionValidator : AbstractValidator<AddGroupsToSessionDto>
+{
+    public AddGroupsToSessionValidator()
+    {
+        RuleFor(x => x.SessionId).NotEmpty();
+        RuleFor(x => x.GroupIds).NotEmpty().WithMessage("Phải chọn ít nhất 1 nhóm.");
+        RuleFor(x => x.SlotCount).GreaterThan(0).LessThanOrEqualTo(10);
+    }
+}
+
+public class UpsertExpenseTemplateValidator : AbstractValidator<UpsertExpenseTemplateDto>
+{
+    public UpsertExpenseTemplateValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Description).MaximumLength(500);
+        RuleForEach(x => x.Items).SetValidator(new ExpenseTemplateItemValidator());
+    }
+}
+
+public class ExpenseTemplateItemValidator : AbstractValidator<ExpenseTemplateItemDto>
+{
+    public ExpenseTemplateItemValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).LessThanOrEqualTo(1_000_000_000);
+    }
+}
+
+public class WipeTransactionalValidator : AbstractValidator<WipeTransactionalDto>
+{
+    public WipeTransactionalValidator()
+    {
+        RuleFor(x => x.Confirmation).NotEmpty();
     }
 }
 

@@ -4,6 +4,7 @@ using BadmintonFinance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BadmintonFinance.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520154340_AddPlayerGroups")]
+    partial class AddPlayerGroups
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,9 +312,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("GroupType")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -557,16 +557,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                     b.Property<bool>("IsGuest")
                         .HasColumnType("bit");
 
-                    b.Property<Guid?>("JoinedViaGroupId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("JoinedViaGroupName")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int?>("JoinedViaGroupType")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("Multiplier")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(5,2)")
@@ -594,8 +584,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("JoinedViaGroupId");
 
                     b.HasIndex("PlayerId");
 
@@ -682,9 +670,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<Guid?>("ExpenseTemplateId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("FromDate")
                         .HasColumnType("datetime2");
 
@@ -728,101 +713,11 @@ namespace BadmintonFinance.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExpenseTemplateId");
-
                     b.HasIndex("PricingTemplateId");
 
                     b.HasIndex("CourtId", "FromDate");
 
                     b.ToTable("CourtBooking", (string)null);
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.ExpenseTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsDefault", "IsActive");
-
-                    b.ToTable("ExpenseTemplate", (string)null);
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.ExpenseTemplateItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("CalculationType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ExpenseTemplateId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExpenseTemplateId", "SortOrder");
-
-                    b.ToTable("ExpenseTemplateItem", (string)null);
                 });
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.PricingTemplate", b =>
@@ -1166,11 +1061,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonSessionParticipant", b =>
                 {
-                    b.HasOne("BadmintonFinance.Domain.Entities.BadmintonPlayerGroup", "JoinedViaGroup")
-                        .WithMany()
-                        .HasForeignKey("JoinedViaGroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("BadmintonFinance.Domain.Entities.BadmintonPlayer", "Player")
                         .WithMany("Participations")
                         .HasForeignKey("PlayerId")
@@ -1182,8 +1072,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("JoinedViaGroup");
 
                     b.Navigation("Player");
 
@@ -1215,11 +1103,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BadmintonFinance.Domain.Entities.ExpenseTemplate", "ExpenseTemplate")
-                        .WithMany()
-                        .HasForeignKey("ExpenseTemplateId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("BadmintonFinance.Domain.Entities.PricingTemplate", "PricingTemplate")
                         .WithMany()
                         .HasForeignKey("PricingTemplateId")
@@ -1227,20 +1110,7 @@ namespace BadmintonFinance.Infrastructure.Migrations
 
                     b.Navigation("Court");
 
-                    b.Navigation("ExpenseTemplate");
-
                     b.Navigation("PricingTemplate");
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.ExpenseTemplateItem", b =>
-                {
-                    b.HasOne("BadmintonFinance.Domain.Entities.ExpenseTemplate", "ExpenseTemplate")
-                        .WithMany("Items")
-                        .HasForeignKey("ExpenseTemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ExpenseTemplate");
                 });
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.PricingTemplateRule", b =>
@@ -1307,11 +1177,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.CourtBooking", b =>
                 {
                     b.Navigation("Sessions");
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.ExpenseTemplate", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.PricingTemplate", b =>

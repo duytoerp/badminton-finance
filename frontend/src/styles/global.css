@@ -105,6 +105,42 @@ button { font: inherit; }
 .badge.draft { background: #e2e8f0; color: #475569; }
 .badge.open { background: #cffafe; color: #155e75; }
 .badge.closed { background: #f3f4f6; color: #374151; }
+.badge.male { background: #dbeafe; color: #1d4ed8; }
+.badge.female { background: #fce7f3; color: #be185d; }
+.badge.other { background: #f1f5f9; color: #475569; }
+.badge.skill-beginner { background: #fef3c7; color: #92400e; }
+.badge.skill-intermediate { background: #dbeafe; color: #1e3a8a; }
+.badge.skill-advanced { background: #dcfce7; color: #14532d; }
+.badge.inactive { background: #f3f4f6; color: #9ca3af; }
+
+/* Multi-select player picker row */
+.player-pick {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-border);
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.player-pick:hover {
+  border-color: var(--c-primary);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.18);
+  transform: translateY(-1px);
+  background: #f0f9ff;
+}
+.player-pick.selected {
+  border-color: var(--c-primary);
+  background: #e0f2fe;
+}
+.player-pick input[type="checkbox"] {
+  width: 20px; height: 20px; accent-color: var(--c-primary);
+  flex-shrink: 0; cursor: pointer;
+}
+.player-pick .pp-main { flex: 1; min-width: 0; }
+.player-pick .pp-title { font-weight: 600; font-size: 15px; }
+.player-pick .pp-sub { color: var(--c-muted); font-size: 12.5px; margin-top: 2px; }
+.player-pick .pp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.player-pick .pp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
 /* Bottom sheet */
 .sheet-backdrop {

@@ -31,6 +31,9 @@ public class CourtBooking : BaseEntity
     public Guid? PricingTemplateId { get; set; }
     public PricingTemplate? PricingTemplate { get; set; }
 
+    public Guid? ExpenseTemplateId { get; set; }
+    public ExpenseTemplate? ExpenseTemplate { get; set; }
+
     public string? Note { get; set; }
 
     /// <summary>Number of <see cref="BadmintonSession"/> rows generated at create time.</summary>

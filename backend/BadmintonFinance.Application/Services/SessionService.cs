@@ -134,7 +134,10 @@ public class SessionService : ISessionService
                 SlotCount = p.SlotCount, Multiplier = p.Multiplier, FixedAmount = p.FixedAmount,
                 AmountDue = p.AmountDue, AmountPaid = p.AmountPaid,
                 Debt = p.AmountDue - p.AmountPaid,
-                PaymentStatus = p.PaymentStatus, IsGuest = p.IsGuest, Note = p.Note
+                PaymentStatus = p.PaymentStatus, IsGuest = p.IsGuest, Note = p.Note,
+                JoinedViaGroupId = p.JoinedViaGroupId,
+                JoinedViaGroupName = p.JoinedViaGroupName,
+                JoinedViaGroupType = p.JoinedViaGroupType
             }).ToList(),
             Transactions = s.Transactions.Select(t => new TransactionDto
             {
@@ -234,6 +237,71 @@ public class SessionService : ISessionService
             IsGuest = p.IsGuest, Note = p.Note
         };
         return ApiResponse<ParticipantDto>.Ok(dtoOut, warnings: warnings);
+    }
+
+    public async Task<ApiResponse<AddParticipantsBulkResultDto>> AddParticipantsBulkAsync(AddParticipantsBulkDto dto, CancellationToken ct = default)
+    {
+        var session = await _db.Set<BadmintonSession>()
+            .Include(s => s.Participants)
+            .Include(s => s.Transactions)
+            .FirstOrDefaultAsync(s => s.Id == dto.SessionId, ct)
+            ?? throw new NotFoundException(nameof(BadmintonSession), dto.SessionId);
+
+        EnsureNotClosed(session);
+
+        var ids = dto.PlayerIds.Distinct().ToList();
+        var players = await _db.Set<BadmintonPlayer>()
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(ct);
+
+        var existing = session.Participants.Select(p => p.PlayerId).ToHashSet();
+        var addedIds = new List<Guid>();
+        var dupSkips = 0;
+        var inactiveSkips = 0;
+        var debtNotices = new List<string>();
+
+        foreach (var pl in players)
+        {
+            if (existing.Contains(pl.Id)) { dupSkips++; continue; }
+            if (!pl.IsActive && !dto.IncludeInactive) { inactiveSkips++; continue; }
+
+            var resolved = await _pricing.ResolveAsync(session.PricingTemplateId, pl.Gender, pl.SkillLevel, ct);
+            _db.Add(new BadmintonSessionParticipant
+            {
+                SessionId = session.Id,
+                PlayerId = pl.Id,
+                SlotCount = dto.SlotCount,
+                Multiplier = resolved.Multiplier,
+                FixedAmount = resolved.FixedAmount,
+                IsGuest = pl.PlayerType == PlayerType.Guest,
+                PaymentStatus = PaymentStatus.Unpaid
+            });
+            existing.Add(pl.Id);
+            addedIds.Add(pl.Id);
+
+            if (pl.CurrentDebt > 0)
+                debtNotices.Add($"{pl.FullName}: nợ {pl.CurrentDebt.ToString("N0", new CultureInfo("vi-VN"))} đ");
+        }
+
+        RecalculateFees(session);
+        session.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        var warnings = new List<string>();
+        if (debtNotices.Count > 0)
+            warnings.Add("Có người đang còn nợ: " + string.Join("; ", debtNotices));
+        if (inactiveSkips > 0)
+            warnings.Add($"Bỏ qua {inactiveSkips} người không hoạt động.");
+
+        return ApiResponse<AddParticipantsBulkResultDto>.Ok(new AddParticipantsBulkResultDto
+        {
+            Added = addedIds.Count,
+            SkippedDuplicate = dupSkips,
+            SkippedInactive = inactiveSkips,
+            AddedPlayerIds = addedIds,
+            ParticipantCount = session.Participants.Count,
+            TotalSlots = session.TotalSlots
+        }, warnings: warnings);
     }
 
     public async Task RemoveParticipantAsync(Guid participantId, CancellationToken ct = default)
@@ -426,6 +494,231 @@ public class SessionService : ISessionService
             TotalIncome = session.TotalIncome, TotalExpense = session.TotalExpense, Balance = session.Balance,
             FeePerSlot = session.FeePerSlot, TotalSlots = session.TotalSlots
         };
+    }
+
+    // ---------- Player groups ----------
+
+    public async Task<PreviewAddGroupsResultDto> PreviewAddGroupsAsync(PreviewAddGroupsDto dto, CancellationToken ct = default)
+    {
+        var session = await _db.Set<BadmintonSession>().AsNoTracking()
+            .Include(s => s.Participants)
+            .FirstOrDefaultAsync(s => s.Id == dto.SessionId, ct)
+            ?? throw new NotFoundException(nameof(BadmintonSession), dto.SessionId);
+
+        var groupIds = dto.GroupIds.Distinct().ToList();
+        var groups = await _db.Set<BadmintonPlayerGroup>().AsNoTracking()
+            .Where(g => groupIds.Contains(g.Id))
+            .Include(g => g.Members).ThenInclude(m => m.Player)
+            .ToListAsync(ct);
+
+        var existingPlayerIds = session.Participants.Select(p => p.PlayerId).ToHashSet();
+        var allMembers = groups
+            .SelectMany(g => g.Members.Where(m => m.Player != null).Select(m => new { GroupId = g.Id, Player = m.Player! }))
+            .ToList();
+
+        // Build per-player aggregation: which groups, status, etc.
+        var perPlayer = allMembers
+            .GroupBy(x => x.Player.Id)
+            .Select(grp =>
+            {
+                var p = grp.First().Player;
+                return new PreviewPlayerDto
+                {
+                    PlayerId = p.Id,
+                    FullName = p.FullName,
+                    PhoneNumber = p.PhoneNumber,
+                    IsActive = p.IsActive,
+                    CurrentDebt = p.CurrentDebt,
+                    AlreadyInSession = existingPlayerIds.Contains(p.Id),
+                    GroupIds = grp.Select(x => x.GroupId).Distinct().ToList()
+                };
+            }).ToList();
+
+        var alreadyPlayers = perPlayer.Where(p => p.AlreadyInSession).ToList();
+        var inactivePlayers = perPlayer.Where(p => !p.AlreadyInSession && !p.IsActive).ToList();
+        var addable = perPlayer.Where(p => !p.AlreadyInSession && (p.IsActive || dto.IncludeInactive)).ToList();
+        var debtPlayers = addable.Where(p => p.CurrentDebt > 0).ToList();
+
+        var groupSummaries = groups.Select(g =>
+        {
+            var members = g.Members.Where(m => m.Player != null).Select(m => m.Player!).ToList();
+            return new PreviewGroupDto
+            {
+                GroupId = g.Id,
+                Name = g.Name,
+                Color = g.Color,
+                MemberCount = members.Count,
+                AlreadyInSession = members.Count(p => existingPlayerIds.Contains(p.Id)),
+                NewToAdd = members.Count(p => !existingPlayerIds.Contains(p.Id) && (p.IsActive || dto.IncludeInactive)),
+                InactiveSkipped = dto.IncludeInactive ? 0 : members.Count(p => !existingPlayerIds.Contains(p.Id) && !p.IsActive),
+                Members = members.Select(p => new PreviewPlayerDto
+                {
+                    PlayerId = p.Id,
+                    FullName = p.FullName,
+                    PhoneNumber = p.PhoneNumber,
+                    IsActive = p.IsActive,
+                    CurrentDebt = p.CurrentDebt,
+                    AlreadyInSession = existingPlayerIds.Contains(p.Id),
+                    GroupIds = new List<Guid> { g.Id }
+                }).OrderBy(x => x.FullName).ToList()
+            };
+        }).ToList();
+
+        return new PreviewAddGroupsResultDto
+        {
+            Groups = groupSummaries,
+            TotalMembers = allMembers.Count,
+            UniquePlayers = perPlayer.Count,
+            NewToAdd = addable.Count,
+            AlreadyInSession = alreadyPlayers.Count,
+            InactiveSkipped = dto.IncludeInactive ? 0 : inactivePlayers.Count,
+            PlayersToAdd = addable.OrderBy(x => x.FullName).ToList(),
+            InactivePlayers = inactivePlayers.OrderBy(x => x.FullName).ToList(),
+            DebtPlayers = debtPlayers.OrderByDescending(x => x.CurrentDebt).ToList(),
+            AlreadyPlayers = alreadyPlayers.OrderBy(x => x.FullName).ToList()
+        };
+    }
+
+    public async Task<ApiResponse<AddGroupsToSessionResultDto>> AddGroupsAsync(AddGroupsToSessionDto dto, CancellationToken ct = default)
+    {
+        var session = await _db.Set<BadmintonSession>()
+            .Include(s => s.Participants)
+            .Include(s => s.Transactions)
+            .FirstOrDefaultAsync(s => s.Id == dto.SessionId, ct)
+            ?? throw new NotFoundException(nameof(BadmintonSession), dto.SessionId);
+
+        EnsureNotClosed(session);
+
+        var groupIds = dto.GroupIds.Distinct().ToList();
+        var groups = await _db.Set<BadmintonPlayerGroup>()
+            .Where(g => groupIds.Contains(g.Id))
+            .Include(g => g.Members).ThenInclude(m => m.Player)
+            .ToListAsync(ct);
+        if (groups.Count == 0)
+            throw new BusinessRuleException("NO_GROUPS", "Không tìm thấy nhóm nào để thêm.");
+
+        var existingPlayerIds = session.Participants.Select(p => p.PlayerId).ToHashSet();
+        var selectedFilter = dto.SelectedPlayerIds?.ToHashSet() ?? new HashSet<Guid>();
+        var useSelection = selectedFilter.Count > 0;
+
+        // Per-group counters for audit history rows
+        var perGroup = groups.ToDictionary(g => g.Id, g => new BadmintonSessionGroup
+        {
+            SessionId = session.Id,
+            PlayerGroupId = g.Id,
+            GroupNameSnapshot = g.Name,
+            MembersTotal = g.Members.Count,
+            AppliedBy = null,
+            AppliedAt = DateTime.UtcNow
+        });
+
+        var addedPlayerIds = new HashSet<Guid>();
+        var dedupedSkips = new HashSet<Guid>();
+        var inactiveSkips = new HashSet<Guid>();
+        var warnings = new List<string>();
+        var debtNotices = new List<string>();
+
+        foreach (var g in groups)
+        {
+            var sg = perGroup[g.Id];
+            foreach (var m in g.Members)
+            {
+                if (m.Player == null) continue;
+                var pl = m.Player;
+
+                if (useSelection && !selectedFilter.Contains(pl.Id))
+                    continue;
+
+                if (existingPlayerIds.Contains(pl.Id) || addedPlayerIds.Contains(pl.Id))
+                {
+                    sg.MembersSkippedDuplicate++;
+                    dedupedSkips.Add(pl.Id);
+                    continue;
+                }
+                if (!pl.IsActive && !dto.IncludeInactive)
+                {
+                    sg.MembersSkippedInactive++;
+                    inactiveSkips.Add(pl.Id);
+                    continue;
+                }
+
+                var resolved = await _pricing.ResolveAsync(session.PricingTemplateId, pl.Gender, pl.SkillLevel, ct);
+                var newPart = new BadmintonSessionParticipant
+                {
+                    SessionId = session.Id,
+                    PlayerId = pl.Id,
+                    SlotCount = dto.SlotCount,
+                    Multiplier = resolved.Multiplier,
+                    FixedAmount = resolved.FixedAmount,
+                    IsGuest = pl.PlayerType == Domain.Enums.PlayerType.Guest,
+                    PaymentStatus = PaymentStatus.Unpaid,
+                    JoinedViaGroupId = g.Id,
+                    JoinedViaGroupType = g.GroupType,
+                    JoinedViaGroupName = g.Name
+                };
+                _db.Add(newPart);
+                addedPlayerIds.Add(pl.Id);
+                sg.MembersAdded++;
+
+                if (pl.CurrentDebt > 0)
+                    debtNotices.Add($"{pl.FullName}: nợ {pl.CurrentDebt.ToString("N0", new CultureInfo("vi-VN"))} đ");
+            }
+            _db.Add(sg);
+        }
+
+        // Recalc fees with the new participants in Local
+        RecalculateFees(session);
+        session.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        await _audit.LogAsync(nameof(BadmintonSession), session.Id.ToString(), "AddGroups", null,
+            new
+            {
+                groupIds,
+                added = addedPlayerIds.Count,
+                skippedDuplicate = dedupedSkips.Count,
+                skippedInactive = inactiveSkips.Count,
+                includeInactive = dto.IncludeInactive
+            }, ct: ct);
+
+        if (debtNotices.Count > 0)
+            warnings.Add("Có người đang còn nợ: " + string.Join("; ", debtNotices));
+        if (inactiveSkips.Count > 0 && !dto.IncludeInactive)
+            warnings.Add($"Bỏ qua {inactiveSkips.Count} người không hoạt động (inactive).");
+
+        var result = new AddGroupsToSessionResultDto
+        {
+            Added = addedPlayerIds.Count,
+            SkippedDuplicate = dedupedSkips.Count,
+            SkippedInactive = inactiveSkips.Count,
+            AddedPlayerIds = addedPlayerIds.ToList(),
+            AppliedGroupIds = groupIds,
+            ParticipantCount = session.Participants.Count,
+            TotalSlots = session.TotalSlots
+        };
+        return ApiResponse<AddGroupsToSessionResultDto>.Ok(result, warnings: warnings);
+    }
+
+    public async Task<IEnumerable<SessionGroupHistoryDto>> GetSessionGroupsAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        return await _db.Set<BadmintonSessionGroup>().AsNoTracking()
+            .Where(sg => sg.SessionId == sessionId)
+            .Include(sg => sg.Session)
+            .OrderByDescending(sg => sg.AppliedAt)
+            .Select(sg => new SessionGroupHistoryDto
+            {
+                Id = sg.Id,
+                SessionId = sg.SessionId,
+                SessionTitle = sg.Session != null ? sg.Session.Title : null,
+                SessionPlayDate = sg.Session != null ? sg.Session.PlayDate : sg.AppliedAt,
+                PlayerGroupId = sg.PlayerGroupId,
+                GroupNameSnapshot = sg.GroupNameSnapshot,
+                MembersTotal = sg.MembersTotal,
+                MembersAdded = sg.MembersAdded,
+                MembersSkippedDuplicate = sg.MembersSkippedDuplicate,
+                MembersSkippedInactive = sg.MembersSkippedInactive,
+                AppliedAt = sg.AppliedAt
+            }).ToListAsync(ct);
     }
 
     // ---------- Business logic helpers ----------
