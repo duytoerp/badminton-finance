@@ -1,0 +1,119 @@
+### ---- Auth ----
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{ "userName": "admin", "password": "Admin@123" }
+
+# Response:
+# {
+#   "success": true,
+#   "data": {
+#     "accessToken": "eyJhbGc...",
+#     "refreshToken": "abc...",
+#     "expiresAt": "2026-05-20T14:00:00Z",
+#     "userName": "admin",
+#     "fullName": "Administrator",
+#     "roles": ["Admin"]
+#   }
+# }
+
+### ---- Quick add player ----
+POST http://localhost:5000/api/players/quick
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "fullName": "Nguyễn Văn A", "phoneNumber": "0901234567" }
+
+### ---- Create court ----
+POST http://localhost:5000/api/courts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Sân Bách Khoa",
+  "address": "Hà Nội",
+  "defaultHourlyRate": 120000
+}
+
+### ---- Create session ----
+POST http://localhost:5000/api/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Buổi tối thứ 4",
+  "courtId": "00000000-0000-0000-0000-000000000000",
+  "playDate": "2026-05-20",
+  "startTime": "19:00:00",
+  "endTime": "21:00:00",
+  "courtCount": 1
+}
+
+### ---- Add participant ----
+POST http://localhost:5000/api/sessions/participants
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sessionId": "GUID",
+  "playerId": "GUID",
+  "slotCount": 1
+}
+
+# Response (warning if player has prior debt):
+# {
+#   "success": true,
+#   "data": { "id": "...", "playerName": "Nguyễn Văn A", "amountDue": 0, "paymentStatus": 0 },
+#   "warnings": ["Người chơi đang còn nợ 60.000 đ ở các buổi trước."]
+# }
+
+### ---- Add expense (tiền sân) ----
+POST http://localhost:5000/api/sessions/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sessionId": "GUID",
+  "amount": 240000,
+  "description": "Tiền sân 2h"
+}
+
+### ---- Quick payment ----
+POST http://localhost:5000/api/sessions/payments/quick
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sessionId": "GUID",
+  "playerId": "GUID",
+  "amount": 60000,
+  "paymentMethod": "Cash"
+}
+
+# Response (note paymentStatus on participant updates):
+# { "success": true, "data": { "id": "...", "amount": 60000 }, "warnings": [] }
+
+### ---- Close session ----
+POST http://localhost:5000/api/sessions/{sessionId}/close
+Authorization: Bearer {{token}}
+
+# 422 if rules violated:
+# { "success": false, "errorCode": "NO_COURT_FEE", "message": "Phải nhập chi phí (tiền sân) trước khi chốt." }
+
+### ---- Reopen session ----
+POST http://localhost:5000/api/sessions/reopen
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sessionId": "GUID",
+  "reason": "Sửa lại số tiền sân nhập sai"
+}
+
+### ---- Finance report ----
+GET http://localhost:5000/api/reports/finance?from=2026-05-01&to=2026-05-31
+Authorization: Bearer {{token}}
+
+### ---- Debts ----
+GET http://localhost:5000/api/reports/debts
+Authorization: Bearer {{token}}
