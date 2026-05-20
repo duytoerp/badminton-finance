@@ -108,6 +108,22 @@ public class UpsertPricingTemplateRuleValidator : AbstractValidator<UpsertPricin
     }
 }
 
+public class CreateCourtBookingValidator : AbstractValidator<CreateCourtBookingDto>
+{
+    public CreateCourtBookingValidator()
+    {
+        RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.CourtId).NotEmpty();
+        RuleFor(x => x.CourtCount).GreaterThan(0);
+        RuleFor(x => x.Pattern).NotEmpty().MaximumLength(1000);
+        RuleFor(x => x).Must(x => x.EndTime > x.StartTime).WithMessage("EndTime must be after StartTime.");
+        RuleFor(x => x).Must(x =>
+            x.RecurrenceType == Domain.Enums.BookingRecurrenceType.SingleDates ||
+            (x.FromDate.HasValue && x.ToDate.HasValue && x.ToDate.Value.Date >= x.FromDate.Value.Date))
+            .WithMessage("FromDate/ToDate is required and ToDate must be on or after FromDate for monthly recurrence.");
+    }
+}
+
 public class RegisterValidator : AbstractValidator<RegisterDto>
 {
     public RegisterValidator()

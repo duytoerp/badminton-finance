@@ -68,6 +68,15 @@ public interface IPricingService
     Task DeleteAsync(Guid id, CancellationToken ct = default);
 }
 
+public interface ICourtBookingService
+{
+    Task<IEnumerable<CourtBookingDto>> ListAsync(CancellationToken ct = default);
+    Task<CourtBookingDto> GetAsync(Guid id, CancellationToken ct = default);
+    Task<CourtBookingPreviewDto> PreviewAsync(CreateCourtBookingDto dto, CancellationToken ct = default);
+    Task<CourtBookingDto> CreateAsync(CreateCourtBookingDto dto, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+}
+
 public interface IPlayerHistoryService
 {
     Task<PlayerHistoryDto> GetHistoryAsync(Guid playerId, CancellationToken ct = default);

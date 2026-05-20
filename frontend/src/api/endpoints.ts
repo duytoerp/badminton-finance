@@ -147,6 +147,51 @@ export const updatePricingTemplate = (id: string, body: Omit<PricingTemplate, 'i
 export const deletePricingTemplate = (id: string) =>
   api.delete<ApiResponse<boolean>>(`/pricing-templates/${id}`).then(r => r.data);
 
+// Court bookings
+export type BookingRecurrenceType = 'SingleDates' | 'MonthlyByWeekday' | 'MonthlyByDayOfMonth';
+
+export interface CourtBooking {
+  id: string;
+  title: string;
+  courtId: string;
+  courtName?: string;
+  recurrenceType: BookingRecurrenceType;
+  pattern: string;
+  fromDate: string;
+  toDate: string;
+  startTime: string;
+  endTime: string;
+  courtCount: number;
+  pricingTemplateId?: string;
+  pricingTemplateName?: string;
+  note?: string;
+  generatedSessionCount: number;
+  createdAt: string;
+}
+
+export interface CreateCourtBookingBody {
+  title: string;
+  courtId: string;
+  recurrenceType: BookingRecurrenceType;
+  pattern: string;
+  fromDate?: string;
+  toDate?: string;
+  startTime: string;
+  endTime: string;
+  courtCount: number;
+  pricingTemplateId?: string;
+  note?: string;
+}
+
+export const listCourtBookings = () =>
+  api.get<ApiResponse<CourtBooking[]>>('/court-bookings').then(r => r.data);
+export const previewCourtBooking = (body: CreateCourtBookingBody) =>
+  api.post<ApiResponse<{ count: number; dates: string[] }>>('/court-bookings/preview', body).then(r => r.data);
+export const createCourtBooking = (body: CreateCourtBookingBody) =>
+  api.post<ApiResponse<CourtBooking>>('/court-bookings', body).then(r => r.data);
+export const deleteCourtBooking = (id: string) =>
+  api.delete<ApiResponse<boolean>>(`/court-bookings/${id}`).then(r => r.data);
+
 // CSV export — return blob URLs caller can download
 export const exportDebtsCsvUrl = () => `${import.meta.env.VITE_API_URL || '/api'}/admin/export/debts.csv`;
 export const exportFinanceCsvUrl = (from: string, to: string) =>

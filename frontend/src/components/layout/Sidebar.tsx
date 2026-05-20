@@ -14,6 +14,7 @@ const groups: { title: string; items: { to: string; label: string; icon: string 
       { to: '/sessions', label: 'Buổi đánh', icon: '🏸' },
       { to: '/players', label: 'Người chơi', icon: '👥' },
       { to: '/courts', label: 'Sân', icon: '🏟️' },
+      { to: '/bookings', label: 'Đặt sân', icon: '📅' },
       { to: '/debts', label: 'Công nợ', icon: '💸' },
       { to: '/fund', label: 'Quỹ', icon: '💰' }
     ]

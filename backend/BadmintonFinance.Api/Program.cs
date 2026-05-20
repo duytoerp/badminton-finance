@@ -50,6 +50,7 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPlayerHistoryService, PlayerHistoryService>();
 builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<ICourtBookingService, CourtBookingService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddHttpContextAccessor();
 

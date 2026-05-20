@@ -12,6 +12,9 @@ public class BadmintonSession : BaseEntity
     public TimeSpan EndTime { get; set; }
     public int CourtCount { get; set; } = 1;
 
+    public Guid? BookingId { get; set; }
+    public CourtBooking? Booking { get; set; }
+
     public Guid? PricingTemplateId { get; set; }
     public PricingTemplate? PricingTemplate { get; set; }
     /// <summary>Snapshot of template's Mode at session-create time. Independent of later template edits.</summary>

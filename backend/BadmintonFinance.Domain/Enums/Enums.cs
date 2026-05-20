@@ -61,6 +61,21 @@ public enum SkillLevel
 }
 
 /// <summary>
+/// How a court booking generates its set of session dates.
+/// </summary>
+public enum BookingRecurrenceType
+{
+    /// <summary>Theo ngày — Pattern is a CSV of yyyy-MM-dd dates, one session per date.</summary>
+    SingleDates = 0,
+
+    /// <summary>Theo tháng – theo thứ — Pattern is a CSV of DayOfWeek ints (0=Sun..6=Sat). One session per matching date inside [FromDate,ToDate].</summary>
+    MonthlyByWeekday = 1,
+
+    /// <summary>Theo tháng – theo ngày — Pattern is a CSV of day-of-month ints (1..31). One session per matching date inside [FromDate,ToDate]; days that don't exist in a given month are skipped.</summary>
+    MonthlyByDayOfMonth = 2
+}
+
+/// <summary>
 /// How a pricing template distributes the session expense across participants.
 /// </summary>
 public enum PricingMode

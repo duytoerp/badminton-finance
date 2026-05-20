@@ -10,6 +10,7 @@ import Fund from './pages/Fund';
 import Reports from './pages/Reports';
 import Debts from './pages/Debts';
 import Courts from './pages/Courts';
+import Bookings from './pages/Bookings';
 import UsersAdmin from './pages/admin/Users';
 import AuditLog from './pages/admin/AuditLog';
 import PricingTemplatesAdmin from './pages/admin/PricingTemplates';
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/sessions"    element={<RequireAuth><Sessions /></RequireAuth>} />
         <Route path="/sessions/:id" element={<RequireAuth><SessionDetail /></RequireAuth>} />
         <Route path="/courts"      element={<RequireAuth><Courts /></RequireAuth>} />
+        <Route path="/bookings"    element={<RequireAuth><Bookings /></RequireAuth>} />
         <Route path="/debts"       element={<RequireAuth><Debts /></RequireAuth>} />
         <Route path="/fund"        element={<RequireAuth><Fund /></RequireAuth>} />
         <Route path="/reports"     element={<RequireAuth><Reports /></RequireAuth>} />

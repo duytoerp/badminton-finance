@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<BadmintonFundTransaction> FundTransactions => Set<BadmintonFundTransaction>();
     public DbSet<PricingTemplate> PricingTemplates => Set<PricingTemplate>();
     public DbSet<PricingTemplateRule> PricingTemplateRules => Set<PricingTemplateRule>();
+    public DbSet<CourtBooking> CourtBookings => Set<CourtBooking>();
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<User> Users => Set<User>();
@@ -57,7 +58,21 @@ public class AppDbContext : DbContext
             e.Property(x => x.FeePerSlot).HasColumnType("decimal(18,2)");
             e.HasOne(x => x.Court).WithMany(c => c.Sessions).HasForeignKey(x => x.CourtId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.PricingTemplate).WithMany().HasForeignKey(x => x.PricingTemplateId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Booking).WithMany(b => b.Sessions).HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.PlayDate, x.Status });
+            e.HasIndex(x => x.BookingId);
+            e.HasQueryFilter(x => !x.IsDeleted);
+        });
+
+        b.Entity<CourtBooking>(e =>
+        {
+            e.ToTable("CourtBooking");
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Pattern).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.Note).HasMaxLength(1000);
+            e.HasOne(x => x.Court).WithMany().HasForeignKey(x => x.CourtId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.PricingTemplate).WithMany().HasForeignKey(x => x.PricingTemplateId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.CourtId, x.FromDate });
             e.HasQueryFilter(x => !x.IsDeleted);
         });
 
