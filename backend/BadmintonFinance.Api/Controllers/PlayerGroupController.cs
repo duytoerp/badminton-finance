@@ -1,3 +1,4 @@
+using BadmintonFinance.Api.Authorization;
 using BadmintonFinance.Application.DTOs;
 using BadmintonFinance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -22,14 +23,17 @@ public class PlayerGroupController : ControllerBase
         => ApiResponse<PlayerGroupDetailDto>.Ok(await _svc.GetAsync(id, ct));
 
     [HttpPost]
+    [Authorize(Policy = Policies.ManagePlayers)]
     public async Task<ApiResponse<PlayerGroupDto>> Create(UpsertPlayerGroupDto dto, CancellationToken ct)
         => ApiResponse<PlayerGroupDto>.Ok(await _svc.CreateAsync(dto, ct));
 
     [HttpPut("{id}")]
+    [Authorize(Policy = Policies.ManagePlayers)]
     public async Task<ApiResponse<PlayerGroupDto>> Update(Guid id, UpsertPlayerGroupDto dto, CancellationToken ct)
         => ApiResponse<PlayerGroupDto>.Ok(await _svc.UpdateAsync(id, dto, ct));
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Policies.ManagePlayers)]
     public async Task<ApiResponse<bool>> Delete(Guid id, CancellationToken ct)
     {
         await _svc.DeleteAsync(id, ct);
@@ -37,10 +41,12 @@ public class PlayerGroupController : ControllerBase
     }
 
     [HttpPost("members/add")]
+    [Authorize(Policy = Policies.ManagePlayers)]
     public async Task<ApiResponse<PlayerGroupDetailDto>> AddMembers(GroupMembersDto dto, CancellationToken ct)
         => ApiResponse<PlayerGroupDetailDto>.Ok(await _svc.AddMembersAsync(dto, ct));
 
     [HttpPost("members/remove")]
+    [Authorize(Policy = Policies.ManagePlayers)]
     public async Task<ApiResponse<PlayerGroupDetailDto>> RemoveMembers(GroupMembersDto dto, CancellationToken ct)
         => ApiResponse<PlayerGroupDetailDto>.Ok(await _svc.RemoveMembersAsync(dto, ct));
 

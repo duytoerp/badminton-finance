@@ -5,6 +5,7 @@ import DataTable, { Column } from '../components/common/DataTable';
 import ResponsiveSheet from '../components/common/ResponsiveSheet';
 import Modal from '../components/common/Modal';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 import {
   addGroupMembers, createPlayerGroup, deletePlayerGroup, getGroupUsageHistory,
   getPlayerGroup, listPlayerGroups, listPlayers, removeGroupMembers, updatePlayerGroup,
@@ -16,6 +17,7 @@ const fmt = (n: number) => (n || 0).toLocaleString('vi-VN') + 'đ';
 
 export default function PlayerGroups() {
   const desktop = useIsDesktop();
+  const canManage = useAuth(s => s.canManagePlayers)();
   const [items, setItems] = useState<PlayerGroup[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -80,14 +82,14 @@ export default function PlayerGroups() {
         render: r => (
           <>
             <button className="btn btn-sm" onClick={() => setMembersFor(r)}>Thành viên</button>
-            <button className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>Sửa</button>
+            {canManage && <button className="btn btn-sm btn-ghost" onClick={() => setEditing(r)}>Sửa</button>}
             <button className="btn btn-sm btn-ghost" onClick={() => setHistoryFor(r)}>Lịch sử</button>
-            <button className="btn btn-sm btn-ghost"
+            {canManage && <button className="btn btn-sm btn-ghost"
               style={{ color: 'var(--c-danger)' }}
               onClick={async () => {
                 if (!confirm(`Xóa nhóm "${r.name}"?`)) return;
                 await deletePlayerGroup(r.id); load();
-              }}>Xóa</button>
+              }}>Xóa</button>}
           </>
         ) }
     ];
@@ -97,13 +99,15 @@ export default function PlayerGroups() {
         <PageHeader title="Nhóm người chơi" subtitle={`${total} nhóm`}
           actions={
             <>
-              <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
-                Import JSON
-                <input type="file" accept="application/json" style={{ display: 'none' }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
-              </label>
+              {canManage && (
+                <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                  Import JSON
+                  <input type="file" accept="application/json" style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
+                </label>
+              )}
               <button className="btn btn-ghost" onClick={exportJson}>Export JSON</button>
-              <button className="btn" onClick={() => setEditing('new')}>+ Thêm nhóm</button>
+              {canManage && <button className="btn" onClick={() => setEditing('new')}>+ Thêm nhóm</button>}
             </>
           } />
         <DataTable
@@ -119,7 +123,7 @@ export default function PlayerGroups() {
           onClose={() => setEditing(null)}
           onDone={load}
         />
-        <MembersDrawer group={membersFor} onClose={() => setMembersFor(null)} onDone={load} />
+        <MembersDrawer group={membersFor} canManage={canManage} onClose={() => setMembersFor(null)} onDone={load} />
         <UsageHistoryModal group={historyFor} onClose={() => setHistoryFor(null)} />
       </div>
     );
@@ -155,20 +159,20 @@ export default function PlayerGroups() {
               </div>
             </div>
             <div className="btn-row" style={{ marginTop: 8 }}>
-              <button className="btn secondary btn-sm" onClick={(e) => { e.stopPropagation(); setEditing(g); }}>Sửa</button>
+              {canManage && <button className="btn secondary btn-sm" onClick={(e) => { e.stopPropagation(); setEditing(g); }}>Sửa</button>}
               <button className="btn secondary btn-sm" onClick={(e) => { e.stopPropagation(); setHistoryFor(g); }}>Lịch sử</button>
             </div>
           </div>
         ))}
       </div>
-      <button className="fab" onClick={() => setEditing('new')}>+</button>
+      {canManage && <button className="fab" onClick={() => setEditing('new')}>+</button>}
       <GroupEditSheet
         open={editing !== null}
         group={editing === 'new' ? null : editing}
         onClose={() => setEditing(null)}
         onDone={load}
       />
-      <MembersDrawer group={membersFor} onClose={() => setMembersFor(null)} onDone={load} />
+      <MembersDrawer group={membersFor} canManage={canManage} onClose={() => setMembersFor(null)} onDone={load} />
       <UsageHistoryModal group={historyFor} onClose={() => setHistoryFor(null)} />
     </>
   );
@@ -240,8 +244,8 @@ function GroupEditSheet({ open, group, onClose, onDone }: {
   );
 }
 
-function MembersDrawer({ group, onClose, onDone }: {
-  group: PlayerGroup | null; onClose: () => void; onDone: () => void;
+function MembersDrawer({ group, canManage, onClose, onDone }: {
+  group: PlayerGroup | null; canManage: boolean; onClose: () => void; onDone: () => void;
 }) {
   const [detail, setDetail] = useState<PlayerGroupDetail | null>(null);
   const [picking, setPicking] = useState(false);
@@ -267,9 +271,11 @@ function MembersDrawer({ group, onClose, onDone }: {
         {!detail ? <p>Đang tải…</p> : (
           <>
             <p className="card-sub">{detail.members.length} thành viên</p>
-            <div className="btn-row" style={{ marginBottom: 12 }}>
-              <button className="btn" onClick={() => setPicking(true)}>+ Thêm thành viên</button>
-            </div>
+            {canManage && (
+              <div className="btn-row" style={{ marginBottom: 12 }}>
+                <button className="btn" onClick={() => setPicking(true)}>+ Thêm thành viên</button>
+              </div>
+            )}
             {detail.members.length === 0 && <p className="card-sub">Chưa có thành viên.</p>}
             {detail.members.map(m => (
               <div className="card" key={m.playerId}>
@@ -281,9 +287,9 @@ function MembersDrawer({ group, onClose, onDone }: {
                       <div style={{ color: 'var(--c-danger)', fontWeight: 600 }}>Nợ {fmt(m.currentDebt)}</div>
                     )}
                   </div>
-                  <button className="btn btn-sm btn-ghost"
+                  {canManage && <button className="btn btn-sm btn-ghost"
                     style={{ color: 'var(--c-danger)' }}
-                    onClick={() => remove(m.playerId)}>Xóa</button>
+                    onClick={() => remove(m.playerId)}>Xóa</button>}
                 </div>
               </div>
             ))}

@@ -10,6 +10,7 @@ import {
   listPricingTemplates, previewCourtBooking
 } from '../api/endpoints';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 
 const WEEKDAYS = [
   { v: 1, label: 'T2' }, { v: 2, label: 'T3' }, { v: 3, label: 'T4' },
@@ -27,6 +28,7 @@ const plusDays = (iso: string, n: number) => { const d = new Date(iso); d.setDat
 
 export default function Bookings() {
   const desktop = useIsDesktop();
+  const canManage = useAuth(s => s.canManageBookings)();
   const [items, setItems] = useState<CourtBooking[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -48,13 +50,13 @@ export default function Bookings() {
     { key: 'count', header: 'Số buổi', className: 'num', accessor: r => r.generatedSessionCount,
       render: r => <b>{r.generatedSessionCount}</b> },
     { key: 'actions', header: '', className: 'actions',
-      render: r => <button className="btn btn-sm" style={{ background: 'var(--c-danger)' }} onClick={() => onDelete(r.id)}>Xoá</button> }
+      render: r => canManage ? <button className="btn btn-sm" style={{ background: 'var(--c-danger)' }} onClick={() => onDelete(r.id)}>Xoá</button> : null }
   ];
 
   const desktopView = (
     <>
       <PageHeader title="Đặt sân (lịch lặp)" subtitle={`${items.length} lịch`}
-        actions={<button className="btn" onClick={() => setOpen(true)}>+ Tạo lịch đặt</button>} />
+        actions={canManage ? <button className="btn" onClick={() => setOpen(true)}>+ Tạo lịch đặt</button> : undefined} />
       <DataTable columns={cols} rows={items} rowKey={r => r.id} />
     </>
   );
@@ -77,7 +79,7 @@ export default function Bookings() {
             <div style={{ textAlign: 'right' }}>
               <b style={{ fontSize: 18 }}>{b.generatedSessionCount}</b>
               <div className="card-sub">buổi</div>
-              <button className="btn btn-sm btn-ghost" onClick={() => onDelete(b.id)}>Xoá</button>
+              {canManage && <button className="btn btn-sm btn-ghost" onClick={() => onDelete(b.id)}>Xoá</button>}
             </div>
           </div>
         </div>
@@ -88,7 +90,7 @@ export default function Bookings() {
   return (
     <div className="page">
       {desktop ? desktopView : mobileView}
-      {!desktop && <button className="fab" onClick={() => setOpen(true)}>+</button>}
+      {!desktop && canManage && <button className="fab" onClick={() => setOpen(true)}>+</button>}
       <BookingSheet open={open} onClose={() => setOpen(false)} onDone={load} />
     </div>
   );

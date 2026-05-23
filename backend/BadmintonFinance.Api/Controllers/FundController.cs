@@ -1,3 +1,4 @@
+using BadmintonFinance.Api.Authorization;
 using BadmintonFinance.Application.DTOs;
 using BadmintonFinance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,7 @@ public class FundController : ControllerBase
         => ApiResponse<IEnumerable<FundTransactionDto>>.Ok(await _svc.GetTransactionsAsync(fundId, take, ct));
 
     [HttpPost("adjust")]
+    [Authorize(Policy = Policies.ManageFund)]
     public async Task<ApiResponse<FundDto>> Adjust(AdjustFundDto dto, CancellationToken ct)
         => ApiResponse<FundDto>.Ok(await _svc.AdjustAsync(dto, ct));
 }

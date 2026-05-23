@@ -5,11 +5,13 @@ import { PageHeader } from '../components/layout/Shell';
 import ResponsiveSheet from '../components/common/ResponsiveSheet';
 import DataTable, { Column } from '../components/common/DataTable';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 import { createPlayer, listPlayers, quickAddPlayer, updatePlayer, Player, Gender, SkillLevel } from '../api/endpoints';
 
 export default function Players() {
   const desktop = useIsDesktop();
   const nav = useNavigate();
+  const canManage = useAuth(s => s.canManagePlayers)();
   const [items, setItems] = useState<Player[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -43,7 +45,7 @@ export default function Players() {
       { key: 'actions', header: '', className: 'actions',
         render: r => (
           <>
-            <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); setEditing(r); }}>Sửa</button>
+            {canManage && <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); setEditing(r); }}>Sửa</button>}
             <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); nav(`/players/${r.id}`); }}>Lịch sử</button>
           </>
         ) }
@@ -53,7 +55,7 @@ export default function Players() {
       <div className="page">
         <PageHeader title="Quản lý người chơi"
           subtitle={`${total} người`}
-          actions={<button className="btn" onClick={() => setEditing('new')}>+ Thêm người chơi</button>} />
+          actions={canManage ? <button className="btn" onClick={() => setEditing('new')}>+ Thêm người chơi</button> : undefined} />
         <DataTable
           columns={cols} rows={items} total={total} page={page} pageSize={50}
           onPage={setPage} rowKey={r => r.id}
@@ -94,14 +96,14 @@ export default function Players() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                 {p.currentDebt > 0 && <span className="badge unpaid">Nợ {p.currentDebt.toLocaleString('vi-VN')}đ</span>}
-                <button className="btn btn-sm btn-ghost"
-                  onClick={(e) => { e.stopPropagation(); setEditing(p); }}>Sửa</button>
+                {canManage && <button className="btn btn-sm btn-ghost"
+                  onClick={(e) => { e.stopPropagation(); setEditing(p); }}>Sửa</button>}
               </div>
             </div>
           </div>
         ))}
       </div>
-      <button className="fab" aria-label="Thêm người chơi" onClick={() => setEditing('new')}>+</button>
+      {canManage && <button className="fab" aria-label="Thêm người chơi" onClick={() => setEditing('new')}>+</button>}
       <PlayerSheet open={editing !== null} player={editing === 'new' ? null : editing}
         onClose={() => setEditing(null)} onDone={load} />
     </>

@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<BadmintonSessionGroup> SessionGroups => Set<BadmintonSessionGroup>();
     public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
     public DbSet<ExpenseTemplateItem> ExpenseTemplateItems => Set<ExpenseTemplateItem>();
+    public DbSet<BadmintonMatchHistory> MatchHistory => Set<BadmintonMatchHistory>();
+    public DbSet<BadmintonMatchPlanHistory> MatchPlanHistory => Set<BadmintonMatchPlanHistory>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -222,6 +224,30 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.ExpenseTemplate).WithMany(t => t.Items)
                 .HasForeignKey(x => x.ExpenseTemplateId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ExpenseTemplateId, x.SortOrder });
+        });
+
+        b.Entity<BadmintonMatchHistory>(e =>
+        {
+            e.ToTable("BadmintonMatchHistory");
+            e.Property(x => x.Team1PlayerIds).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Team2PlayerIds).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Label).HasMaxLength(150);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne(x => x.Session).WithMany()
+                .HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.SessionId, x.MatchNumber });
+            e.HasQueryFilter(x => !x.IsDeleted);
+        });
+
+        b.Entity<BadmintonMatchPlanHistory>(e =>
+        {
+            e.ToTable("BadmintonMatchPlanHistory");
+            e.Property(x => x.PayloadJson).HasColumnType("nvarchar(max)").IsRequired();
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne(x => x.Session).WithMany()
+                .HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.SessionId, x.GeneratedAt });
+            e.HasQueryFilter(x => !x.IsDeleted);
         });
 
         b.Entity<BadmintonSessionGroup>(e =>

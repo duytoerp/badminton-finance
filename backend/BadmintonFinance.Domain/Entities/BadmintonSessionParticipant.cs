@@ -27,6 +27,12 @@ public class BadmintonSessionParticipant : BaseEntity
     public string? Note { get; set; }
 
     /// <summary>
+    /// Timestamp the player physically arrived at the court. Null = not checked in yet.
+    /// Used by the match planner to only schedule players who have actually shown up.
+    /// </summary>
+    public DateTime? CheckedInAt { get; set; }
+
+    /// <summary>
     /// If the participant was added by applying a PlayerGroup, this references that group.
     /// Null when added one-off ("Thêm cá nhân"). Used to show "(qua nhóm X)" in player history.
     /// </summary>

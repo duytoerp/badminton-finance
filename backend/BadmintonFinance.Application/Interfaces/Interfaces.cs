@@ -38,6 +38,8 @@ public interface ISessionService
     Task<PreviewAddGroupsResultDto> PreviewAddGroupsAsync(PreviewAddGroupsDto dto, CancellationToken ct = default);
     Task<ApiResponse<AddGroupsToSessionResultDto>> AddGroupsAsync(AddGroupsToSessionDto dto, CancellationToken ct = default);
     Task<IEnumerable<SessionGroupHistoryDto>> GetSessionGroupsAsync(Guid sessionId, CancellationToken ct = default);
+    Task<ParticipantDto> SetCheckInAsync(CheckInParticipantDto dto, CancellationToken ct = default);
+    Task<CheckInAllResultDto> CheckInAllAsync(Guid sessionId, CancellationToken ct = default);
 }
 
 public interface IExpenseTemplateService
@@ -112,6 +114,27 @@ public interface ICourtBookingService
 public interface IPlayerHistoryService
 {
     Task<PlayerHistoryDto> GetHistoryAsync(Guid playerId, CancellationToken ct = default);
+}
+
+public interface IMatchPlannerService
+{
+    Task<MatchPlanDto> GenerateAsync(GenerateMatchPlanDto dto, CancellationToken ct = default);
+}
+
+public interface IMatchHistoryService
+{
+    Task<MatchHistoryDto> RecordAsync(RecordMatchDto dto, CancellationToken ct = default);
+    Task<MatchHistoryDto> FinishAsync(Guid matchId, FinishMatchDto dto, CancellationToken ct = default);
+    Task<IEnumerable<MatchHistoryDto>> ListBySessionAsync(Guid sessionId, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
+}
+
+public interface IMatchPlanHistoryService
+{
+    Task<MatchPlanHistorySummaryDto> SaveAsync(SaveMatchPlanDto dto, CancellationToken ct = default);
+    Task<IEnumerable<MatchPlanHistorySummaryDto>> ListBySessionAsync(Guid sessionId, CancellationToken ct = default);
+    Task<MatchPlanHistoryDto> GetAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface IFundService

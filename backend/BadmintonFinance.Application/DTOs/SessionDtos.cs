@@ -73,6 +73,9 @@ public class ParticipantDto
     public bool IsGuest { get; set; }
     public string? Note { get; set; }
 
+    /// <summary>Set when the player has physically arrived at the court. Null = not checked in.</summary>
+    public DateTime? CheckedInAt { get; set; }
+
     public Guid? JoinedViaGroupId { get; set; }
     public string? JoinedViaGroupName { get; set; }
     public PlayerGroupType? JoinedViaGroupType { get; set; }
@@ -130,6 +133,21 @@ public class CreateExpenseDto
     public Guid SessionId { get; set; }
     public decimal Amount { get; set; }
     public string Description { get; set; } = string.Empty;
+}
+
+/// <summary>Toggle a single participant's check-in state.</summary>
+public class CheckInParticipantDto
+{
+    public Guid ParticipantId { get; set; }
+    /// <summary>true = mark checked-in (now), false = clear check-in.</summary>
+    public bool CheckedIn { get; set; } = true;
+}
+
+public class CheckInAllResultDto
+{
+    public int CheckedIn { get; set; }
+    public int AlreadyCheckedIn { get; set; }
+    public int TotalParticipants { get; set; }
 }
 
 public class QuickPaymentDto

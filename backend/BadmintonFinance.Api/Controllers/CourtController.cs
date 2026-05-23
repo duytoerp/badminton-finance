@@ -1,3 +1,4 @@
+using BadmintonFinance.Api.Authorization;
 using BadmintonFinance.Application.DTOs;
 using BadmintonFinance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -18,14 +19,17 @@ public class CourtController : ControllerBase
         => ApiResponse<IEnumerable<CourtDto>>.Ok(await _svc.ListAsync(ct));
 
     [HttpPost]
+    [Authorize(Policy = Policies.ManageCourts)]
     public async Task<ApiResponse<CourtDto>> Create(CreateCourtDto dto, CancellationToken ct)
         => ApiResponse<CourtDto>.Ok(await _svc.CreateAsync(dto, ct));
 
     [HttpPut("{id}")]
+    [Authorize(Policy = Policies.ManageCourts)]
     public async Task<ApiResponse<CourtDto>> Update(Guid id, CreateCourtDto dto, CancellationToken ct)
         => ApiResponse<CourtDto>.Ok(await _svc.UpdateAsync(id, dto, ct));
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Policies.ManageCourts)]
     public async Task<ApiResponse<bool>> Delete(Guid id, CancellationToken ct)
     {
         await _svc.DeleteAsync(id, ct);

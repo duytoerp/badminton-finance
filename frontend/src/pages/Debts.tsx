@@ -4,6 +4,7 @@ import AppBar from '../components/layout/AppBar';
 import { PageHeader } from '../components/layout/Shell';
 import DataTable, { Column } from '../components/common/DataTable';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 import { getDebts } from '../api/endpoints';
 import { downloadCsv } from '../utils/download';
 
@@ -12,6 +13,7 @@ const fmt = (n: number) => (n || 0).toLocaleString('vi-VN') + 'đ';
 export default function Debts() {
   const desktop = useIsDesktop();
   const nav = useNavigate();
+  const canExport = useAuth(s => s.canExport)();
   const [items, setItems] = useState<any[]>([]);
   const [search, setSearch] = useState('');
 
@@ -38,10 +40,12 @@ export default function Debts() {
         <PageHeader title="Quản lý công nợ"
           subtitle={`${filtered.length} người · Tổng: ${fmt(total)}`}
           actions={
-            <button className="btn btn-ghost btn-sm"
-              onClick={() => downloadCsv('/admin/export/debts.csv', `debts_${new Date().toISOString().slice(0,10)}.csv`)}>
-              ⬇ Xuất CSV
-            </button>
+            canExport ? (
+              <button className="btn btn-ghost btn-sm"
+                onClick={() => downloadCsv('/admin/export/debts.csv', `debts_${new Date().toISOString().slice(0,10)}.csv`)}>
+                ⬇ Xuất CSV
+              </button>
+            ) : undefined
           } />
         <DataTable columns={cols} rows={filtered} rowKey={r => r.playerId}
           toolbar={<input className="grow" placeholder="Tìm tên / SĐT" value={search}

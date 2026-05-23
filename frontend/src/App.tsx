@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Shell from './components/layout/Shell';
+import Toaster from './components/common/Toaster';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import Players from './pages/Players';
@@ -17,6 +18,7 @@ import AuditLog from './pages/admin/AuditLog';
 import PricingTemplatesAdmin from './pages/admin/PricingTemplates';
 import ExpenseTemplatesAdmin from './pages/admin/ExpenseTemplates';
 import MaintenanceAdmin from './pages/admin/Maintenance';
+import PermissionsAdmin from './pages/admin/Permissions';
 import Login from './pages/Login';
 import { useAuth } from './store/auth';
 import { useIsDesktop } from './hooks/useBreakpoint';
@@ -29,6 +31,16 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function RequireRole({ roles, children }: { roles: string[]; children: JSX.Element }) {
+  const token = useAuth(s => s.token);
+  const userRoles = useAuth(s => s.roles);
+  const loc = useLocation();
+  if (!token) return <Navigate to="/login" state={{ from: loc }} replace />;
+  const ok = roles.some(r => userRoles.includes(r));
+  if (!ok) return <Navigate to="/" state={{ forbidden: true }} replace />;
+  return children;
+}
+
 function HomeOrDashboard() {
   const desktop = useIsDesktop();
   return desktop ? <Dashboard /> : <Home />;
@@ -37,6 +49,7 @@ function HomeOrDashboard() {
 export default function App() {
   return (
     <Shell>
+      <Toaster />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/"            element={<RequireAuth><HomeOrDashboard /></RequireAuth>} />
@@ -51,11 +64,12 @@ export default function App() {
         <Route path="/debts"       element={<RequireAuth><Debts /></RequireAuth>} />
         <Route path="/fund"        element={<RequireAuth><Fund /></RequireAuth>} />
         <Route path="/reports"     element={<RequireAuth><Reports /></RequireAuth>} />
-        <Route path="/admin/users" element={<RequireAuth><UsersAdmin /></RequireAuth>} />
-        <Route path="/admin/audit" element={<RequireAuth><AuditLog /></RequireAuth>} />
-        <Route path="/admin/pricing-templates" element={<RequireAuth><PricingTemplatesAdmin /></RequireAuth>} />
-        <Route path="/admin/expense-templates" element={<RequireAuth><ExpenseTemplatesAdmin /></RequireAuth>} />
-        <Route path="/admin/maintenance" element={<RequireAuth><MaintenanceAdmin /></RequireAuth>} />
+        <Route path="/admin/users" element={<RequireRole roles={["Admin"]}><UsersAdmin /></RequireRole>} />
+        <Route path="/admin/audit" element={<RequireRole roles={["Admin"]}><AuditLog /></RequireRole>} />
+        <Route path="/admin/pricing-templates" element={<RequireRole roles={["Admin"]}><PricingTemplatesAdmin /></RequireRole>} />
+        <Route path="/admin/expense-templates" element={<RequireRole roles={["Admin"]}><ExpenseTemplatesAdmin /></RequireRole>} />
+        <Route path="/admin/maintenance" element={<RequireRole roles={["Admin"]}><MaintenanceAdmin /></RequireRole>} />
+        <Route path="/admin/permissions" element={<RequireRole roles={["Admin"]}><PermissionsAdmin /></RequireRole>} />
         <Route path="*"            element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>

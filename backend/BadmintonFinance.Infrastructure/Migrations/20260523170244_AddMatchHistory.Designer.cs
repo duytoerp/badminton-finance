@@ -4,6 +4,7 @@ using BadmintonFinance.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BadmintonFinance.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260523170244_AddMatchHistory")]
+    partial class AddMatchHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -238,9 +241,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("FinishedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -260,12 +260,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
 
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.Property<string>("Team1PlayerIds")
                         .IsRequired()
@@ -294,66 +288,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                     b.HasIndex("SessionId", "MatchNumber");
 
                     b.ToTable("BadmintonMatchHistory", (string)null);
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonMatchPlanHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("CheckedInCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CourtCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("GeneratedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("OnlyCheckedIn")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PlayerCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Rounds")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("SkillMode")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SessionId", "GeneratedAt");
-
-                    b.ToTable("BadmintonMatchPlanHistory", (string)null);
                 });
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonPlayer", b =>
@@ -1235,17 +1169,6 @@ namespace BadmintonFinance.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonMatchHistory", b =>
-                {
-                    b.HasOne("BadmintonFinance.Domain.Entities.BadmintonSession", "Session")
-                        .WithMany()
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
-                });
-
-            modelBuilder.Entity("BadmintonFinance.Domain.Entities.BadmintonMatchPlanHistory", b =>
                 {
                     b.HasOne("BadmintonFinance.Domain.Entities.BadmintonSession", "Session")
                         .WithMany()

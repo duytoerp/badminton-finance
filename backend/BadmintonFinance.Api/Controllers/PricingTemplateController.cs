@@ -1,3 +1,4 @@
+using BadmintonFinance.Api.Authorization;
 using BadmintonFinance.Application.DTOs;
 using BadmintonFinance.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -22,14 +23,17 @@ public class PricingTemplateController : ControllerBase
         => ApiResponse<PricingTemplateDto?>.Ok(await _svc.GetDefaultAsync(ct));
 
     [HttpPost]
+    [Authorize(Policy = Policies.ManageTemplates)]
     public async Task<ApiResponse<PricingTemplateDto>> Create(UpsertPricingTemplateDto dto, CancellationToken ct)
         => ApiResponse<PricingTemplateDto>.Ok(await _svc.CreateAsync(dto, ct));
 
     [HttpPut("{id}")]
+    [Authorize(Policy = Policies.ManageTemplates)]
     public async Task<ApiResponse<PricingTemplateDto>> Update(Guid id, UpsertPricingTemplateDto dto, CancellationToken ct)
         => ApiResponse<PricingTemplateDto>.Ok(await _svc.UpdateAsync(id, dto, ct));
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Policies.ManageTemplates)]
     public async Task<ApiResponse<bool>> Delete(Guid id, CancellationToken ct)
     {
         await _svc.DeleteAsync(id, ct);

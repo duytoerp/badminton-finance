@@ -5,9 +5,11 @@ import DataTable, { Column } from '../components/common/DataTable';
 import ResponsiveSheet from '../components/common/ResponsiveSheet';
 import { createCourt, listCourts, Court } from '../api/endpoints';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 
 export default function Courts() {
   const desktop = useIsDesktop();
+  const canManage = useAuth(s => s.canManageCourts)();
   const [items, setItems] = useState<Court[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -25,7 +27,7 @@ export default function Courts() {
   const content = desktop ? (
     <>
       <PageHeader title="Quản lý sân" subtitle={`${items.length} sân`}
-        actions={<button className="btn" onClick={() => setOpen(true)}>+ Thêm sân</button>} />
+        actions={canManage ? <button className="btn" onClick={() => setOpen(true)}>+ Thêm sân</button> : undefined} />
       <DataTable columns={cols} rows={items} rowKey={r => r.id} />
     </>
   ) : (
@@ -48,7 +50,7 @@ export default function Courts() {
   return (
     <div className="page">
       {content}
-      {!desktop && <button className="fab" onClick={() => setOpen(true)}>+</button>}
+      {!desktop && canManage && <button className="fab" onClick={() => setOpen(true)}>+</button>}
       <CourtSheet open={open} onClose={() => setOpen(false)} onDone={load} />
     </div>
   );

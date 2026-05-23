@@ -60,6 +60,24 @@ public enum SkillLevel
     Advanced = 2
 }
 
+/// <summary>State of a recorded match in BadmintonMatchHistory.</summary>
+public enum MatchStatus
+{
+    /// <summary>Match started but not finished — scores not yet entered.</summary>
+    InProgress = 0,
+    /// <summary>Match finished — final scores recorded (or explicitly closed without a score).</summary>
+    Finished = 1
+}
+
+/// <summary>How the match planner pairs the 4 players inside one court of a round.</summary>
+public enum MatchSkillMode
+{
+    /// <summary>Strongest+weakest vs the two middles — balanced match strength.</summary>
+    Mixed = 0,
+    /// <summary>Strong pair vs weak pair — players play at their own level.</summary>
+    Similar = 1
+}
+
 /// <summary>
 /// How a court booking generates its set of session dates.
 /// </summary>

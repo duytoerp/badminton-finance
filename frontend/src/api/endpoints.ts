@@ -42,6 +42,7 @@ export interface Participant {
   slotCount: number; multiplier: number; fixedAmount: number;
   amountDue: number; amountPaid: number; debt: number;
   paymentStatus: PaymentStatus; isGuest: boolean;
+  checkedInAt?: string | null;
   joinedViaGroupId?: string;
   joinedViaGroupName?: string;
   joinedViaGroupType?: PlayerGroupType;
@@ -113,6 +114,14 @@ export const addParticipantsBulk = (
   }).then(r => r.data);
 export const removeParticipant = (participantId: string) =>
   api.delete<ApiResponse<boolean>>(`/sessions/participants/${participantId}`).then(r => r.data);
+export const setCheckIn = (participantId: string, checkedIn: boolean) =>
+  api.post<ApiResponse<Participant>>(`/sessions/participants/${participantId}/check-in`,
+    { checkedIn }).then(r => r.data);
+export interface CheckInAllResult {
+  checkedIn: number; alreadyCheckedIn: number; totalParticipants: number;
+}
+export const checkInAll = (sessionId: string) =>
+  api.post<ApiResponse<CheckInAllResult>>(`/sessions/${sessionId}/check-in-all`).then(r => r.data);
 export const addExpense = (sessionId: string, amount: number, description: string) =>
   api.post<ApiResponse<TransactionDto>>('/sessions/expenses', { sessionId, amount, description }).then(r => r.data);
 export const quickPayment = (sessionId: string, playerId: string, amount: number, paymentMethod = 'Cash') =>
@@ -146,6 +155,20 @@ export const listRoles = () =>
   api.get<ApiResponse<string[]>>('/admin/roles').then(r => r.data);
 export const getPlayerHistory = (id: string) =>
   api.get<ApiResponse<any>>(`/admin/players/${id}/history`).then(r => r.data);
+
+// RBAC permission matrix (read-only, Admin)
+export interface PermissionRow {
+  key: string;
+  label: string;
+  description: string;
+  allowedRoles: string[];
+}
+export interface PermissionMatrix {
+  roles: string[];
+  permissions: PermissionRow[];
+}
+export const getPermissionMatrix = () =>
+  api.get<ApiResponse<PermissionMatrix>>('/admin/permissions/matrix').then(r => r.data);
 
 // Filtered sessions
 export const filterSessions = (params: any) =>
@@ -428,6 +451,138 @@ export const addGroupsToSession = (
   }).then(r => r.data);
 export const getSessionGroups = (sessionId: string) =>
   api.get<ApiResponse<SessionGroupHistory[]>>(`/sessions/${sessionId}/groups`).then(r => r.data);
+
+// Match planner — auto-divide sets by skill so everyone plays evenly
+export type MatchSkillMode = 'Mixed' | 'Similar';
+
+export interface MatchPlanPlayer {
+  playerId: string;
+  fullName: string;
+  skillLevel?: SkillLevel;
+  gender?: Gender;
+  gamesPlayed: number;
+}
+
+export interface MatchCourt {
+  courtIndex: number;
+  team1: string[]; // player ids
+  team2: string[];
+  team1Skill: number;
+  team2Skill: number;
+}
+
+export interface MatchRound {
+  index: number;
+  courts: MatchCourt[];
+  resting: string[];
+}
+
+export interface MatchPlan {
+  sessionId: string;
+  rounds: number;
+  courtCount: number;
+  skillMode: MatchSkillMode;
+  playerCount: number;
+  totalParticipants: number;
+  checkedInCount: number;
+  onlyCheckedIn: boolean;
+  sitOutPerRound: number;
+  players: MatchPlanPlayer[];
+  roundsPlan: MatchRound[];
+  notes: string[];
+}
+
+export interface GenerateMatchPlanBody {
+  rounds: number;
+  courtCount: number;
+  skillMode: MatchSkillMode;
+  participantIds?: string[];
+  onlyCheckedIn?: boolean;
+  seed?: number;
+}
+
+export const generateMatchPlan = (sessionId: string, body: GenerateMatchPlanBody) =>
+  api.post<ApiResponse<MatchPlan>>(`/sessions/${sessionId}/match-plan`, body).then(r => r.data);
+
+// Match history — saved results of played sets per session
+export interface MatchHistoryPlayer {
+  playerId: string;
+  fullName: string;
+  skillLevel?: SkillLevel;
+}
+
+export type MatchStatus = 'InProgress' | 'Finished';
+
+export interface MatchHistory {
+  id: string;
+  sessionId: string;
+  matchNumber: number;
+  team1: MatchHistoryPlayer[];
+  team2: MatchHistoryPlayer[];
+  team1Score?: number | null;
+  team2Score?: number | null;
+  winnerTeam?: 1 | 2 | null;
+  status: MatchStatus;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  playedAt: string;
+  label?: string;
+  note?: string;
+}
+
+export interface RecordMatchBody {
+  team1PlayerIds: string[];
+  team2PlayerIds: string[];
+  team1Score?: number | null;
+  team2Score?: number | null;
+  label?: string;
+  note?: string;
+  /** When true, the match is saved as InProgress (no FinishedAt). */
+  startOnly?: boolean;
+}
+
+export interface FinishMatchBody {
+  team1Score?: number | null;
+  team2Score?: number | null;
+  note?: string;
+}
+
+export const listMatchHistory = (sessionId: string) =>
+  api.get<ApiResponse<MatchHistory[]>>(`/sessions/${sessionId}/matches`).then(r => r.data);
+export const recordMatch = (sessionId: string, body: RecordMatchBody) =>
+  api.post<ApiResponse<MatchHistory>>(`/sessions/${sessionId}/matches`, body).then(r => r.data);
+export const deleteMatchHistory = (id: string) =>
+  api.delete<ApiResponse<boolean>>(`/sessions/matches/${id}`).then(r => r.data);
+export const finishMatch = (matchId: string, body: FinishMatchBody) =>
+  api.put<ApiResponse<MatchHistory>>(`/sessions/matches/${matchId}/finish`, body).then(r => r.data);
+
+// Saved match-plan snapshots (lịch sử chia set)
+export interface MatchPlanHistorySummary {
+  id: string;
+  sessionId: string;
+  generatedAt: string;
+  rounds: number;
+  courtCount: number;
+  skillMode: MatchSkillMode;
+  onlyCheckedIn: boolean;
+  playerCount: number;
+  checkedInCount: number;
+  note?: string;
+}
+
+export interface MatchPlanHistoryFull extends MatchPlanHistorySummary {
+  plan?: MatchPlan | null;
+}
+
+export const listMatchPlanHistory = (sessionId: string) =>
+  api.get<ApiResponse<MatchPlanHistorySummary[]>>(`/sessions/${sessionId}/match-plans`).then(r => r.data);
+export const saveMatchPlan = (sessionId: string, plan: MatchPlan, note?: string) =>
+  api.post<ApiResponse<MatchPlanHistorySummary>>(`/sessions/${sessionId}/match-plans`,
+    { plan, note }).then(r => r.data);
+export const getMatchPlanHistory = (planId: string) =>
+  api.get<ApiResponse<MatchPlanHistoryFull>>(`/sessions/match-plans/${planId}`).then(r => r.data);
+export const deleteMatchPlanHistory = (planId: string) =>
+  api.delete<ApiResponse<boolean>>(`/sessions/match-plans/${planId}`).then(r => r.data);
 
 // CSV export — return blob URLs caller can download
 export const exportDebtsCsvUrl = () => `${import.meta.env.VITE_API_URL || '/api'}/admin/export/debts.csv`;

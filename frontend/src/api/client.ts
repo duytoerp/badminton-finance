@@ -12,9 +12,21 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (r) => r,
   async (err) => {
-    if (err?.response?.status === 401) {
+    const status = err?.response?.status;
+    if (status === 401) {
       localStorage.removeItem('access_token');
       window.location.href = '/login';
+    } else if (status === 403) {
+      const msg =
+        err?.response?.data?.message ||
+        'Bạn không có quyền thực hiện thao tác này.';
+      try {
+        window.dispatchEvent(
+          new CustomEvent('app:toast', { detail: { type: 'error', text: msg } })
+        );
+      } catch {
+        // ignore — environments without CustomEvent fall through
+      }
     }
     return Promise.reject(err);
   }

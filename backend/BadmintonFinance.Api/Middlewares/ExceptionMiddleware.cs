@@ -14,7 +14,23 @@ public class ExceptionMiddleware
 
     public async Task InvokeAsync(HttpContext ctx)
     {
-        try { await _next(ctx); }
+        try
+        {
+            await _next(ctx);
+
+            // ASP.NET auth short-circuits to 401/403 without throwing, so the response
+            // body is empty by default. Wrap it in our ApiResponse envelope so the
+            // frontend's axios interceptor can read errorCode like every other failure.
+            if (!ctx.Response.HasStarted)
+            {
+                if (ctx.Response.StatusCode == (int)HttpStatusCode.Unauthorized)
+                    await Write(ctx, HttpStatusCode.Unauthorized, "UNAUTHORIZED",
+                        "Phiên đăng nhập không hợp lệ.");
+                else if (ctx.Response.StatusCode == (int)HttpStatusCode.Forbidden)
+                    await Write(ctx, HttpStatusCode.Forbidden, "FORBIDDEN",
+                        "Bạn không có quyền thực hiện hành động này.");
+            }
+        }
         catch (NotFoundException ex)
         {
             await Write(ctx, HttpStatusCode.NotFound, ex.Code, ex.Message);

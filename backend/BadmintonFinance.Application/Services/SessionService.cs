@@ -135,6 +135,7 @@ public class SessionService : ISessionService
                 AmountDue = p.AmountDue, AmountPaid = p.AmountPaid,
                 Debt = p.AmountDue - p.AmountPaid,
                 PaymentStatus = p.PaymentStatus, IsGuest = p.IsGuest, Note = p.Note,
+                CheckedInAt = p.CheckedInAt,
                 JoinedViaGroupId = p.JoinedViaGroupId,
                 JoinedViaGroupName = p.JoinedViaGroupName,
                 JoinedViaGroupType = p.JoinedViaGroupType
@@ -719,6 +720,67 @@ public class SessionService : ISessionService
                 MembersSkippedInactive = sg.MembersSkippedInactive,
                 AppliedAt = sg.AppliedAt
             }).ToListAsync(ct);
+    }
+
+    // ---------- Check-in ----------
+
+    public async Task<ParticipantDto> SetCheckInAsync(CheckInParticipantDto dto, CancellationToken ct = default)
+    {
+        var p = await _db.Set<BadmintonSessionParticipant>()
+            .Include(x => x.Session)
+            .Include(x => x.Player)
+            .FirstOrDefaultAsync(x => x.Id == dto.ParticipantId, ct)
+            ?? throw new NotFoundException(nameof(BadmintonSessionParticipant), dto.ParticipantId);
+
+        EnsureNotClosed(p.Session!);
+
+        p.CheckedInAt = dto.CheckedIn ? DateTime.UtcNow : null;
+        p.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        return new ParticipantDto
+        {
+            Id = p.Id, SessionId = p.SessionId, PlayerId = p.PlayerId,
+            PlayerName = p.Player?.FullName ?? "",
+            PlayerPhone = p.Player?.PhoneNumber,
+            Gender = p.Player?.Gender, SkillLevel = p.Player?.SkillLevel,
+            SlotCount = p.SlotCount, Multiplier = p.Multiplier, FixedAmount = p.FixedAmount,
+            AmountDue = p.AmountDue, AmountPaid = p.AmountPaid,
+            Debt = p.AmountDue - p.AmountPaid,
+            PaymentStatus = p.PaymentStatus, IsGuest = p.IsGuest, Note = p.Note,
+            CheckedInAt = p.CheckedInAt,
+            JoinedViaGroupId = p.JoinedViaGroupId,
+            JoinedViaGroupName = p.JoinedViaGroupName,
+            JoinedViaGroupType = p.JoinedViaGroupType
+        };
+    }
+
+    public async Task<CheckInAllResultDto> CheckInAllAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        var session = await _db.Set<BadmintonSession>()
+            .Include(s => s.Participants)
+            .FirstOrDefaultAsync(s => s.Id == sessionId, ct)
+            ?? throw new NotFoundException(nameof(BadmintonSession), sessionId);
+
+        EnsureNotClosed(session);
+
+        var now = DateTime.UtcNow;
+        var already = 0;
+        var newly = 0;
+        foreach (var p in session.Participants)
+        {
+            if (p.CheckedInAt.HasValue) already++;
+            else { p.CheckedInAt = now; p.UpdatedAt = now; newly++; }
+        }
+
+        if (newly > 0) await _db.SaveChangesAsync(ct);
+
+        return new CheckInAllResultDto
+        {
+            CheckedIn = newly,
+            AlreadyCheckedIn = already,
+            TotalParticipants = session.Participants.Count
+        };
     }
 
     // ---------- Business logic helpers ----------

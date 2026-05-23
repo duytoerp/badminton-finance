@@ -1,4 +1,5 @@
 using System.Text;
+using BadmintonFinance.Api.Authorization;
 using BadmintonFinance.Api.Middlewares;
 using BadmintonFinance.Application.Interfaces;
 using BadmintonFinance.Application.Services;
@@ -35,7 +36,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(opt =>
+{
+    // Single source of truth: PermissionCatalog.Permissions defines both the
+    // role mapping registered here and the matrix shown on /admin/permissions.
+    // Add new policies by editing PermissionCatalog, not this loop.
+    foreach (var p in PermissionCatalog.Permissions)
+    {
+        opt.AddPolicy(p.Key, b => b.RequireRole(p.AllowedRoles));
+    }
+});
 
 // ---- App services ----
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -54,6 +64,9 @@ builder.Services.AddScoped<ICourtBookingService, CourtBookingService>();
 builder.Services.AddScoped<IPlayerGroupService, PlayerGroupService>();
 builder.Services.AddScoped<IExpenseTemplateService, ExpenseTemplateService>();
 builder.Services.AddScoped<IAdminMaintenanceService, AdminMaintenanceService>();
+builder.Services.AddScoped<IMatchPlannerService, MatchPlannerService>();
+builder.Services.AddScoped<IMatchHistoryService, MatchHistoryService>();
+builder.Services.AddScoped<IMatchPlanHistoryService, MatchPlanHistoryService>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddHttpContextAccessor();
 

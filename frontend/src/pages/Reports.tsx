@@ -4,6 +4,7 @@ import { PageHeader } from '../components/layout/Shell';
 import BarChart from '../components/common/BarChart';
 import DataTable, { Column } from '../components/common/DataTable';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { useAuth } from '../store/auth';
 import { getReport, getDebts, getDashboardStats } from '../api/endpoints';
 import { downloadCsv } from '../utils/download';
 
@@ -11,6 +12,7 @@ const fmt = (n: number) => (n || 0).toLocaleString('vi-VN') + 'đ';
 
 export default function Reports() {
   const desktop = useIsDesktop();
+  const canExport = useAuth(s => s.canExport)();
   const today = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const [from, setFrom] = useState(firstOfMonth.toISOString().slice(0, 10));
@@ -35,17 +37,19 @@ export default function Reports() {
         <PageHeader title="Báo cáo thu chi"
           subtitle={data ? `${data.sessionCount} buổi · ${from} → ${to}` : undefined}
           actions={
-            <>
-              <button className="btn btn-ghost btn-sm"
-                onClick={() => downloadCsv(`/admin/export/finance.csv?from=${from}&to=${to}`,
-                  `finance_${from}_${to}.csv`)}>
-                ⬇ Xuất CSV
-              </button>
-              <button className="btn btn-ghost btn-sm"
-                onClick={() => downloadCsv('/admin/export/debts.csv', `debts.csv`)}>
-                ⬇ Xuất công nợ
-              </button>
-            </>
+            canExport ? (
+              <>
+                <button className="btn btn-ghost btn-sm"
+                  onClick={() => downloadCsv(`/admin/export/finance.csv?from=${from}&to=${to}`,
+                    `finance_${from}_${to}.csv`)}>
+                  ⬇ Xuất CSV
+                </button>
+                <button className="btn btn-ghost btn-sm"
+                  onClick={() => downloadCsv('/admin/export/debts.csv', `debts.csv`)}>
+                  ⬇ Xuất công nợ
+                </button>
+              </>
+            ) : undefined
           } />
 
         <div className="filter-bar">

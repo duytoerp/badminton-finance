@@ -9,7 +9,8 @@ namespace BadmintonFinance.Application.Services;
 public class UserService : IUserService
 {
     private readonly DbContext _db;
-    public UserService(DbContext db) { _db = db; }
+    private readonly IAuditLogger _audit;
+    public UserService(DbContext db, IAuditLogger audit) { _db = db; _audit = audit; }
 
     public async Task<PagedResult<UserDto>> ListAsync(PagedQuery q, CancellationToken ct = default)
     {
@@ -53,6 +54,12 @@ public class UserService : IUserService
             _db.Add(new UserRole { User = user, Role = role });
         }
         await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(nameof(User), user.Id.ToString(), "Create",
+            null,
+            new { user.UserName, Roles = string.Join(",", dto.Roles) },
+            null, ct);
+
         return new UserDto
         {
             Id = user.Id, UserName = user.UserName, Email = user.Email, FullName = user.FullName,
@@ -65,6 +72,13 @@ public class UserService : IUserService
         var user = await _db.Set<User>().Include("UserRoles.Role")
             .FirstOrDefaultAsync(u => u.Id == id, ct)
             ?? throw new NotFoundException(nameof(User), id);
+
+        var before = new
+        {
+            user.FullName, user.PhoneNumber, user.IsActive,
+            Roles = string.Join(",", user.UserRoles.Select(r => r.Role!.Name).OrderBy(s => s))
+        };
+
         user.FullName = dto.FullName.Trim();
         user.PhoneNumber = dto.PhoneNumber;
         user.IsActive = dto.IsActive;
@@ -80,6 +94,14 @@ public class UserService : IUserService
             _db.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
         }
         await _db.SaveChangesAsync(ct);
+
+        var after = new
+        {
+            user.FullName, user.PhoneNumber, user.IsActive,
+            Roles = string.Join(",", dto.Roles.OrderBy(s => s))
+        };
+        await _audit.LogAsync(nameof(User), user.Id.ToString(), "Update", before, after, null, ct);
+
         return new UserDto
         {
             Id = user.Id, UserName = user.UserName, Email = user.Email, FullName = user.FullName,
@@ -94,6 +116,9 @@ public class UserService : IUserService
                 ?? throw new NotFoundException(nameof(User), id);
         u.IsDeleted = true; u.IsActive = false; u.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(nameof(User), u.Id.ToString(), "Delete",
+            new { u.UserName }, null, null, ct);
     }
 
     public async Task<IEnumerable<string>> GetRolesAsync(CancellationToken ct = default)
